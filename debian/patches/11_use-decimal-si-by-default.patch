@@ -1,0 +1,15 @@
+Author: Adrien Cunin <adri2000@ubuntu.com>
+Description: by default, display file sizes using decimal base and SI units instead of just bytes; complies with Ubuntu UnitsPolicy.
+diff --git a/src/engine/engine_options.cpp b/src/engine/engine_options.cpp
+index 1c76c52..e8e4281 100644
+--- a/src/engine/engine_options.cpp
++++ b/src/engine/engine_options.cpp
+@@ -75,7 +75,7 @@ unsigned int register_engine_options()
+ 		{ "Logging file", L"", option_flags::platform },
+ 		{ "Logging filesize limit", 10, option_flags::normal, 0, 2000 },
+ 		{ "Logging show detailed logs", false, option_flags::internal },
+-		{ "Size format", 0, option_flags::normal, 0, 4 },
++		{ "Size format", 3, option_flags::normal, 0, 4 },
+ 		{ "Size thousands separator", true, option_flags::normal },
+ 		{ "Size decimal places", 1, option_flags::numeric_clamp, 0, 3 },
+ 		{ "TCP Keepalive Interval", 15, option_flags::numeric_clamp, 1, 10000 },

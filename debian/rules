@@ -1,0 +1,45 @@
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+override_dh_autoreconf:
+ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo yes),yes)
+	patch -p1 < debian/patches/11_use-decimal-si-by-default.patch
+	touch debian/applied
+endif
+	dh_autoreconf
+
+override_dh_auto_clean:
+	dh_auto_clean
+ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo yes),yes)
+	@if [ -e ./debian/applied ]; then \
+		patch -R -p1 < debian/patches/11_use-decimal-si-by-default.patch ; \
+		rm ./debian/applied ; \
+	fi
+endif
+
+override_dh_dwz:
+	: Skipping dwz, compression not beneficial on filezilla binary
+
+override_dh_auto_configure:
+	dh_auto_configure -- --disable-autoupdatecheck --disable-manualupdatecheck --with-dbus
+
+override_dh_auto_install:
+	dh_auto_install
+	# Remove .la files
+	find debian/tmp -name "*.la" -delete
+
+override_dh_installchangelogs:
+	# Install upstream NEWS file as changelog
+	dh_installchangelogs -k NEWS
+
+override_dh_link:
+	# Remove doc from filezilla binary package,
+	# a symlink to filezilla-common is created by dh_link
+	rm -rf debian/filezilla/usr/share/doc/
+	dh_link

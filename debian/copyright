@@ -1,0 +1,121 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: filezilla
+Upstream-Contact: Tim Kosse <tim.kosse@filezilla-project.org>
+Source: http://filezilla-project.org/
+
+Files: *
+Copyright: Copyright (C) 2004-2021 Tim Kosse <tim.kosse@filezilla-project.org>
+License: GPL-2+
+
+Files: m4/ax_cxx_compile_stdcxx*.m4
+Copyright: Copyright (C) 2008 Benjamin Kosnik <bkoz@redhat.com>
+           Copyright (C) 2012 Zack Weinberg <zackw@panix.com>
+           Copyright (C) 2013 Roy Stogner <roystgnr@ices.utexas.edu>
+           Copyright (C) 2014, 2015 Google Inc.; contributed by Alexey Sokolov <sokolov@google.com>
+           Copyright (C) 2015 Paul Norman <penorman@mac.com>
+           Copyright (C) 2015 Moritz Klammler <moritz@klammler.eu>
+           Copyright (C) 2016, 2018 Krzesimir Nowak <qdlacz@gmail.com>
+           Copyright (C) 2019 Enji Cooper <yaneurabeya@gmail.com>
+License: permissive
+
+Files: src/putty/*
+Copyright: Copyright (C) 1997-2016 Simon Tatham
+           Copyright (C) 2004-2021 Tim Kosse <tim.kosse@filezilla-project.org>
+           Copyright (C) the PuTTY team
+License: MIT
+
+Files: src/putty/sshcrcda.c
+Copyright: Copyright (C) 1998 CORE SDI S.A., Buenos Aires, Argentina.
+           Copyright (C) Simon Tatham (some modifications)
+License: BSD-like
+
+Files: src/pugixml/*
+Copyright: Copyright (C) 2006-2015 Arseny Kapoulkine <arseny.kapoulkine@gmail.com>
+           Copyright (C) 2003 Kristen Wegner <kristen@tima.net>
+License: MIT
+
+Files: src/dbus/wxdbus*
+Copyright: Copyright (C) 2007 Andrei Borovsky <anb@symmetrica.net>
+License: MIT
+
+Files: data/filezilla.appdata.xml
+Copyright: Copyright (C) 2014 Ryan Lerch <rlerch@redhat.com>
+           Copyright (C) 2016-2021 Tim Kosse <tim.kosse@filezilla-project.org>
+           Copyright (C) 2020-2021 Phil Wyett (kathenas) <philip.wyett@kathenas.org>
+License: CC0-1.0
+
+Files: debian/*
+Copyright: Copyright (C) 2006-2009 Adam Cécile (Le_Vert) <gandalf@le-vert.net>
+           Copyright (C) 2008-2009 Adrien Cunin <adri2000@ubuntu.com>
+           Copyright (C) 2016-2017 Gianfranco Costamagna <locutusofborg@debian.org>
+           Copyright (C) 2020-2021 Phil Wyett (kathenas) <philip.wyett@kathenas.org>
+License: GPL-2+
+
+License: MIT
+ Portions copyright Robert de Bath, Joris van Rantwijk, Delian Delchev,
+ Andreas Schultz, Jeroen Massar, Wez Furlong, Nicolas Barry, Justin Bradford,
+ Ben Harris, Malcolm Smith, Ahmad Khalifa, Markus Kuhn, CORE SDI S.A, and
+ Free Software Foundation
+ .
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL SIMON
+ TATHAM BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: BSD-like
+ All rights reserved. Redistribution and use in source and binary
+ forms, with or without modification, are permitted provided that
+ this copyright notice is retained.
+ .
+ THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ WARRANTIES ARE DISCLAIMED. IN NO EVENT SHALL CORE SDI S.A. BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR
+ CONSEQUENTIAL DAMAGES RESULTING FROM THE USE OR MISUSE OF THIS
+ SOFTWARE.
+
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License,
+ or (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ can be found in /usr/share/common-licenses/GPL-2 file.
+
+License: permissive
+ Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
+
+License: CC0-1.0
+ To the extent possible under law, the author(s) have dedicated all copyright
+ and related and neighboring rights to this software to the public domain
+ worldwide. This software is distributed without any warranty.
+ .
+ You should have received a copy of the CC0 Public Domain Dedication along with
+ this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ .
+ On Debian systems, the complete text of the CC0 1.0 Universal license can be
+ found in ‘/usr/share/common-licenses/CC0-1.0’.

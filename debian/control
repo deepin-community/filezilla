@@ -1,0 +1,66 @@
+Source: filezilla
+Section: net
+Priority: optional
+Maintainer: Phil Wyett <philip.wyett@kathenas.org>
+Build-Depends: debhelper-compat (= 13),
+               gettext,
+               libdbus-1-dev,
+               libfilezilla-dev (>= 0.37.1),
+               libgnutls28-dev (>= 3.7.0),
+               libgtk-3-dev,
+               libpugixml-dev,
+               libsqlite3-dev,
+               libwxgtk3.0-gtk3-dev,
+               nettle-dev,
+               pkg-config,
+               wx-common
+Standards-Version: 4.6.0.1
+Rules-Requires-Root: no
+Homepage: https://filezilla-project.org/
+Vcs-Git: https://salsa.debian.org/debian/filezilla.git
+Vcs-Browser: https://salsa.debian.org/debian/filezilla
+
+Package: filezilla
+Architecture: any
+Depends: filezilla-common (= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
+Recommends: xdg-utils
+Description: Full-featured graphical FTP/FTPS/SFTP client
+ FileZilla is a full-featured FTP client with an easy-to-use GUI.
+ .
+ It is written in C++ and uses the wxWidgets library.
+ .
+ FileZilla includes the following features:
+   * Supports FTP, FTP over SSL/TLS (FTPS) and SSH File Transfer Protocol (SFTP)
+   * IPv6 support
+   * Available in more than 40 languages
+   * Supports resume and transfer of large files >4GB
+   * Easy to use Site Manager and transfer queue
+   * Bookmarks
+   * Drag & drop support
+   * Speed limits
+   * Filename filters
+   * Directory comparison
+   * Network configuration wizard
+   * Remote file editing
+   * Keep-alive
+   * HTTP/1.1, SOCKS5 and FTP Proxy support
+   * Logging to file
+   * Synchronized directory browsing
+   * Remote file search
+   * Tabbed interface to connect to multiple servers
+
+Package: filezilla-common
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}
+Description: Architecture independent files for filezilla
+ FileZilla is a full-featured FTP client with an easy-to-use GUI.
+ .
+ It is written in C++ and uses the wxWidgets library.
+ .
+ See the filezilla package description for the full list of features.
+ .
+ This package contains architecture independent files such as images and
+ translations.
