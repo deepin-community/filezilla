@@ -7,13 +7,19 @@
 
 struct CSpeedLimitsDialog::impl final
 {
+	impl(COptionsBase & options)
+		: options_(options)
+	{}
+
 	wxCheckBox* enable_{};
 	wxTextCtrlEx* download_{};
 	wxTextCtrlEx* upload_{};
+
+	COptionsBase & options_;
 };
 
-CSpeedLimitsDialog::CSpeedLimitsDialog()
-	: impl_(std::make_unique<impl>())
+CSpeedLimitsDialog::CSpeedLimitsDialog(COptionsBase & options)
+	: impl_(std::make_unique<impl>(options))
 {
 }
 
@@ -24,14 +30,14 @@ CSpeedLimitsDialog::~CSpeedLimitsDialog()
 
 void CSpeedLimitsDialog::Run(wxWindow* parent)
 {
-	int downloadlimit = COptions::Get()->get_int(OPTION_SPEEDLIMIT_INBOUND);
-	int uploadlimit = COptions::Get()->get_int(OPTION_SPEEDLIMIT_OUTBOUND);
-	bool enable = COptions::Get()->get_int(OPTION_SPEEDLIMIT_ENABLE) != 0;
+	int downloadlimit = impl_->options_.get_int(OPTION_SPEEDLIMIT_INBOUND);
+	int uploadlimit = impl_->options_.get_int(OPTION_SPEEDLIMIT_OUTBOUND);
+	bool enable = impl_->options_.get_int(OPTION_SPEEDLIMIT_ENABLE) != 0;
 	if (!downloadlimit && !uploadlimit) {
 		enable = false;
 	}
 
-	if (!Create(parent, -1, _("Speed limits"))) {
+	if (!Create(parent, nullID, _("Speed limits"))) {
 		return;
 	}
 
@@ -41,12 +47,12 @@ void CSpeedLimitsDialog::Run(wxWindow* parent)
 	auto split = lay.createFlex(2);
 	main->Add(split);
 
-	split->Add(new wxStaticBitmap(this, -1, CThemeProvider::Get()->CreateBitmap("ART_SPEEDLIMITS", wxString(), CThemeProvider::GetIconSize(iconSizeLarge))));
+	split->Add(CThemeProvider::Get()->createStaticBitmap(this, L"ART_SPEEDLIMITS", iconSizeLarge));
 
 	auto right = lay.createFlex(1);
 	split->Add(right);
 
-	impl_->enable_ = new wxCheckBox(this, -1, _("&Enable speed limits"));
+	impl_->enable_ = new wxCheckBox(this, nullID, _("&Enable speed limits"));
 	impl_->enable_->SetFocus();
 	right->Add(impl_->enable_);
 
@@ -55,16 +61,16 @@ void CSpeedLimitsDialog::Run(wxWindow* parent)
 
 	wxString const unit = CSizeFormat::GetUnitWithBase(CSizeFormat::kilo, 1024);
 
-	inner->Add(new wxStaticText(this, -1, _("Download &limit:")), lay.valign);
-	impl_->download_ = new wxTextCtrlEx(this, -1);
+	inner->Add(new wxStaticText(this, nullID, _("Download &limit:")), lay.valign);
+	impl_->download_ = new wxTextCtrlEx(this, nullID);
 	inner->Add(impl_->download_, lay.valign)->SetMinSize(wxSize(lay.dlgUnits(35), -1));
-	inner->Add(new wxStaticText(this, -1, wxString::Format(_("(in %s/s)"), unit)), lay.valign);
-	inner->Add(new wxStaticText(this, -1, _("U&pload limit:")), lay.valign);
+	inner->Add(new wxStaticText(this, nullID, wxString::Format(_("(in %s/s)"), unit)), lay.valign);
+	inner->Add(new wxStaticText(this, nullID, _("U&pload limit:")), lay.valign);
 	impl_->upload_ = new wxTextCtrlEx(this, -1);
 	inner->Add(impl_->upload_, lay.valign)->SetMinSize(wxSize(lay.dlgUnits(35), -1));
-	inner->Add(new wxStaticText(this, -1, wxString::Format(_("(in %s/s)"), unit)), lay.valign);
+	inner->Add(new wxStaticText(this, nullID, wxString::Format(_("(in %s/s)"), unit)), lay.valign);
 	
-	right->Add(new wxStaticText(this, -1, _("Enter 0 for unlimited speed.")));
+	right->Add(new wxStaticText(this, nullID, _("Enter 0 for unlimited speed.")));
 
 	auto buttons = lay.createButtonSizer(this, main, true);
 
@@ -110,11 +116,11 @@ void CSpeedLimitsDialog::OnOK(wxCommandEvent&)
 		return;
 	}
 
-	COptions::Get()->set(OPTION_SPEEDLIMIT_INBOUND, download);
-	COptions::Get()->set(OPTION_SPEEDLIMIT_OUTBOUND, upload);
+	impl_->options_.set(OPTION_SPEEDLIMIT_INBOUND, download);
+	impl_->options_.set(OPTION_SPEEDLIMIT_OUTBOUND, upload);
 
 	bool enable = impl_->enable_->GetValue() ? 1 : 0;
-	COptions::Get()->set(OPTION_SPEEDLIMIT_ENABLE, enable && (download || upload));
+	impl_->options_.set(OPTION_SPEEDLIMIT_ENABLE, enable && (download || upload));
 
 	EndDialog(wxID_OK);
 }

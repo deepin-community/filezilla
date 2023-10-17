@@ -10,7 +10,6 @@ libfzclient_private_la_CPPFLAGS += -DBUILDING_FILEZILLA
 libfzclient_private_la_SOURCES = \
 		activity_logger.cpp \
 		activity_logger_layer.cpp \
-		aio.cpp \
 		commands.cpp \
 		controlsocket.cpp \
 		directorycache.cpp \
@@ -34,10 +33,8 @@ libfzclient_private_la_SOURCES = \
 		ftp/rename.cpp \
 		ftp/rmd.cpp \
 		ftp/transfersocket.cpp \
-		http/digest.cpp \
 		http/filetransfer.cpp \
 		http/httpcontrolsocket.cpp \
-		http/internalconnect.cpp \
 		http/request.cpp \
 		local_path.cpp \
 		logging.cpp \
@@ -48,7 +45,6 @@ libfzclient_private_la_SOURCES = \
 		optionsbase.cpp \
 		pathcache.cpp \
 		proxy.cpp \
-		reader.cpp \
 		rtt.cpp \
 		server.cpp \
 		servercapabilities.cpp \
@@ -65,10 +61,8 @@ libfzclient_private_la_SOURCES = \
 		sftp/rmd.cpp \
 		sftp/sftpcontrolsocket.cpp \
 		sizeformatting_base.cpp \
-		string_reader.cpp \
 		tls.cpp \
 		version.cpp \
-		writer.cpp \
 		xmlutils.cpp
 
 noinst_HEADERS = \
@@ -91,11 +85,8 @@ noinst_HEADERS = \
 		ftp/rawtransfer.h \
 		ftp/rmd.h \
 		ftp/transfersocket.h \
-		http/connect.h \
-		http/digest.h \
 		http/filetransfer.h \
 		http/httpcontrolsocket.h \
-		http/internalconnect.h \
 		http/request.h \
 		logging_private.h \
 		lookup.h \
@@ -116,7 +107,6 @@ noinst_HEADERS = \
 		sftp/rename.h \
 		sftp/rmd.h \
 		sftp/sftpcontrolsocket.h \
-		string_reader.h \
 		tls.h
 
 if ENABLE_STORJ

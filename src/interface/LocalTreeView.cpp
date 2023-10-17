@@ -29,6 +29,8 @@
 
 #include <algorithm>
 
+using namespace std::literals;
+
 class CTreeItemData : public wxTreeItemData
 {
 public:
@@ -60,7 +62,7 @@ public:
 
 	wxTreeItemId GetHit(const wxPoint& point)
 	{
-		int flags = 0;
+		int flags{};
 		wxTreeItemId hit = m_pLocalTreeView->HitTest(point, flags);
 
 		if (flags & (wxTREE_HITTEST_ABOVE | wxTREE_HITTEST_BELOW | wxTREE_HITTEST_NOWHERE | wxTREE_HITTEST_TOLEFT | wxTREE_HITTEST_TORIGHT)) {
@@ -101,26 +103,27 @@ public:
 			pDragDropManager->pDropTarget = m_pLocalTreeView;
 		}
 
-		auto const format = m_pDataObject->GetReceivedFormat();
+		auto const format = GetReceivedFormat();
 		if (format == m_pFileDataObject->GetFormat()) {
 			m_pLocalTreeView->m_state.HandleDroppedFiles(m_pFileDataObject, path, def == wxDragCopy);
 		}
-		else if (format == m_pLocalDataObject->GetFormat()) {
-			m_pLocalTreeView->m_state.HandleDroppedFiles(m_pLocalDataObject, path, def == wxDragCopy);
+		else if (format == LocalDataObjectFormat()) {
+			m_pLocalTreeView->m_state.HandleDroppedFiles(GetLocalDataObject(), path, def == wxDragCopy);
 		}
 		else {
-			if (m_pRemoteDataObject->GetProcessId() != (int)wxGetProcessId()) {
+			auto * obj = GetRemoteDataObject();
+			if (obj->GetProcessId() != (int)wxGetProcessId()) {
 				wxMessageBoxEx(_("Drag&drop between different instances of FileZilla has not been implemented yet."));
 				return wxDragNone;
 			}
 
 			auto & state = m_pLocalTreeView->m_state;
-			if (!state.GetSite() || m_pRemoteDataObject->GetSite().server != state.GetSite().server) {
+			if (!state.GetSite() || obj->GetSite().server != state.GetSite().server) {
 				wxMessageBoxEx(_("Drag&drop between different servers has not been implemented yet."));
 				return wxDragNone;
 			}
 
-			if (!state.DownloadDroppedFiles(m_pRemoteDataObject, path)) {
+			if (!state.DownloadDroppedFiles(obj, path)) {
 				return wxDragNone;
 			}
 		}
@@ -130,7 +133,7 @@ public:
 
 	virtual bool OnDrop(wxCoord x, wxCoord y)
 	{
-		if (!CScrollableDropTarget<wxTreeCtrlEx>::OnDrop(x, y)) {
+		if (!CFileDropTarget::OnDrop(x, y)) {
 			return false;
 		}
 
@@ -172,7 +175,7 @@ public:
 
 	virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxTreeCtrlEx>::OnDragOver(x, y, def);
+		def = CScrollableDropTarget::OnDragOver(x, y, def);
 
 		if (def == wxDragError ||
 			def == wxDragNone ||
@@ -196,13 +199,13 @@ public:
 
 	virtual void OnLeave()
 	{
-		CScrollableDropTarget<wxTreeCtrlEx>::OnLeave();
+		CScrollableDropTarget::OnLeave();
 		m_pLocalTreeView->ClearDropHighlight();
 	}
 
 	virtual wxDragResult OnEnter(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxTreeCtrlEx>::OnEnter(x, y, def);
+		def = CScrollableDropTarget::OnEnter(x, y, def);
 		return OnDragOver(x, y, def);
 	}
 
@@ -234,14 +237,15 @@ EVT_CHAR(CLocalTreeView::OnChar)
 EVT_MENU(XRCID("ID_OPEN"), CLocalTreeView::OnMenuOpen)
 END_EVENT_TABLE()
 
-CLocalTreeView::CLocalTreeView(wxWindow* parent, wxWindowID id, CState& state, CQueueView *pQueueView)
+CLocalTreeView::CLocalTreeView(wxWindow* parent, wxWindowID id, CState& state, CQueueView *pQueueView, COptionsBase & options)
 	: wxTreeCtrlEx(parent, id, wxDefaultPosition, wxDefaultSize, DEFAULT_TREE_STYLE | wxTAB_TRAVERSAL | wxTR_EDIT_LABELS | wxNO_BORDER)
 	, CSystemImageList(CThemeProvider::GetIconSize(iconSizeSmall).x)
 	, CStateEventHandler(state)
 	, COptionChangeEventHandler(this)
 	, m_pQueueView(pQueueView)
+    , options_(options)
 {
-	wxGetApp().AddStartupProfileRecord("CLocalTreeView::CLocalTreeView");
+	wxGetApp().AddStartupProfileRecord("CLocalTreeView::CLocalTreeView"sv);
 #ifdef __WXMAC__
 	SetFont(wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
 #endif
@@ -253,7 +257,7 @@ CLocalTreeView::CLocalTreeView(wxWindow* parent, wxWindowID id, CState& state, C
 	SetImageList(GetSystemImageList());
 
 	UpdateSortMode();
-	COptions::Get()->watch(OPTION_FILELIST_NAMESORT, this);
+	options_.watch(OPTION_FILELIST_NAMESORT, this);
 
 #ifdef __WXMSW__
 	m_pVolumeEnumeratorThread = 0;
@@ -283,7 +287,7 @@ CLocalTreeView::CLocalTreeView(wxWindow* parent, wxWindowID id, CState& state, C
 
 CLocalTreeView::~CLocalTreeView()
 {
-	COptions::Get()->unwatch_all(this);
+	options_.unwatch_all(this);
 #ifdef __WXMSW__
 	delete m_pVolumeEnumeratorThread;
 #endif
@@ -413,7 +417,7 @@ wxTreeItemId CLocalTreeView::GetSubdir(wxTreeItemId parent, wxString const& subD
 
 bool CLocalTreeView::DisplayDrives(wxTreeItemId parent)
 {
-	wxGetApp().AddStartupProfileRecord("CLocalTreeView::DisplayDrives");
+	wxGetApp().AddStartupProfileRecord("CLocalTreeView::DisplayDrives"sv);
 
 	std::vector<std::wstring> drives = CVolumeDescriptionEnumeratorThread::GetDrives();
 
@@ -435,7 +439,7 @@ bool CLocalTreeView::DisplayDrives(wxTreeItemId parent)
 	}
 	SortChildren(parent);
 
-	wxGetApp().AddStartupProfileRecord("CLocalTreeView::DisplayDrives adding drives done");
+	wxGetApp().AddStartupProfileRecord("CLocalTreeView::DisplayDrives adding drives done"sv);
 
 	return true;
 }
@@ -685,7 +689,7 @@ std::wstring CLocalTreeView::GetDirFromItem(wxTreeItemId item)
 void CLocalTreeView::UpdateSortMode()
 {
 	NameSortMode sortMode;
-	switch (COptions::Get()->get_int(OPTION_FILELIST_NAMESORT))
+	switch (options_.get_int(OPTION_FILELIST_NAMESORT))
 	{
 	case 0:
 	default:
@@ -727,7 +731,7 @@ void CLocalTreeView::RefreshListing()
 	for (auto child = GetFirstChild(m_drives, tmp); child; child = GetNextSibling(child)) {
 		if (IsExpanded(child)) {
 			std::wstring drive = GetItemText(child).ToStdWstring();
-			size_t pos = drive.find(' ' );
+			size_t pos = drive.find(' ');
 			if (pos != std::wstring::npos) {
 				drive = drive.substr(0, pos);
 			}
@@ -796,19 +800,21 @@ void CLocalTreeView::RefreshListing()
 		// Step 3: Merge list of subdirectories with subtree.
 		std::vector<wxTreeItemId> toDelete;
 
-		bool inserted = false;
-
 		wxTreeItemIdValue unused;
 		wxTreeItemId child = GetFirstChild(dir.item, unused);
 
+		wxTreeItemId firstInserted{};
 		wxTreeItemId last = GetLastChild(dir.item);
-
+		if (dir.dir == L"D:\\") {
+			int x{};
+			++x;
+		}
 		auto iter = dirs.begin();
 		while (child || iter != dirs.end()) {
 			int cmp;
 			if (child && iter != dirs.end()) {
 				wxString const& childName = GetItemText(child);
-				cmp = sortFunction_(std::wstring_view(childName.data(), childName.size()), *iter);
+				cmp = sortFunction_(*iter, std::wstring_view(childName.data(), childName.size()));
 			}
 			else if (child) {
 				cmp = 1;
@@ -835,6 +841,9 @@ void CLocalTreeView::RefreshListing()
 					dirsToCheck.push_front(subdir);
 				}
 				child = GetNextSibling(child);
+				if (child == firstInserted) {
+					child = wxTreeItemId{};
+				}
 				++iter;
 			}
 			else if (cmp > 0) {
@@ -845,8 +854,13 @@ void CLocalTreeView::RefreshListing()
 				while (sel && sel != child) {
 					sel = GetItemParent(sel);
 				}
-				toDelete.push_back(child);
+				if (!sel) {
+					toDelete.push_back(child);
+				}
 				child = GetNextSibling(child);
+				if (child == firstInserted) {
+					child = wxTreeItemId{};
+				}
 			}
 			else if (cmp < 0) {
 				// New subdirectory, add treeitem
@@ -859,15 +873,18 @@ void CLocalTreeView::RefreshListing()
 #endif
 					);
 
+				if (!firstInserted) {
+					firstInserted = last;
+				}
+
 				CheckSubdirStatus(last, fullname);
 				++iter;
-				inserted = true;
 			}
 		}
 		for (auto it = toDelete.rbegin(); it != toDelete.rend(); ++it) {
 			Delete(*it);
 		}
-		if (inserted) {
+		if (firstInserted) {
 			SortChildren(dir.item);
 		}
 	}
@@ -911,7 +928,7 @@ void CLocalTreeView::OnStateChange(t_statechange_notifications notification, std
 		SetDir(m_state.GetLocalDir().GetPath());
 	}
 	else if (notification == STATECHANGE_SERVER) {
-		m_windowTinter->SetBackgroundTint(site_colour_to_wx(m_state.GetSite().m_colour));
+		m_windowTinter->SetBackgroundTint(m_state.GetSite().m_colour);
 	}
 	else {
 		wxASSERT(notification == STATECHANGE_APPLYFILTER);
@@ -921,7 +938,7 @@ void CLocalTreeView::OnStateChange(t_statechange_notifications notification, std
 
 void CLocalTreeView::OnBeginDrag(wxTreeEvent& event)
 {
-	if (COptions::Get()->get_int(OPTION_DND_DISABLED) != 0) {
+	if (options_.get_int(OPTION_DND_DISABLED) != 0) {
 		return;
 	}
 
@@ -956,21 +973,22 @@ void CLocalTreeView::OnBeginDrag(wxTreeEvent& event)
 	}
 #endif
 
-	CDragDropManager* pDragDropManager = CDragDropManager::Init();
-	pDragDropManager->pDragSource = this;
-
 #ifdef __WXMAC__
 	// Don't use wxFileDataObject on Mac, crashes on Mojave, wx bug #18232
 	CLocalDataObject obj;
-	obj.AddFile(dir);
 #else
 	wxFileDataObject obj;
-	obj.AddFile(dir);
 #endif
 
-	wxDropSource source(this);
+	CDragDropManager* pDragDropManager = CDragDropManager::Init();
+	pDragDropManager->pDragSource = this;
+
+	obj.AddFile(dir);
+	pDragDropManager->dragDataObject = &obj;
+
+	DropSource source(this);
 	source.SetData(obj);
-	int res = source.DoDragDrop(wxDrag_AllowMove);
+	int res = source.DoFileDragDrop(wxDrag_AllowMove);
 
 	bool handled_internally = pDragDropManager->pDropTarget != 0;
 
@@ -981,6 +999,13 @@ void CLocalTreeView::OnBeginDrag(wxTreeEvent& event)
 		// externally, the internal handlers do this for us already
 		m_state.RefreshLocal();
 	}
+
+#ifdef __WXMAC__
+	if (!source.m_OutDir.IsEmpty()) {
+		CLocalPath target(source.m_OutDir.ToStdWstring());
+		m_state.HandleDroppedFiles(&obj, target, true);
+	}
+#endif
 }
 
 #ifdef __WXMSW__
@@ -1094,10 +1119,10 @@ void CLocalTreeView::OnContextMenu(wxTreeEvent& event)
 
 	wxMenu menu;
 	auto item = new wxMenuItem(&menu, XRCID("ID_UPLOAD"), _("&Upload"), _("Upload selected directory"));
-	item->SetBitmap(wxArtProvider::GetBitmap(_T("ART_UPLOAD"), wxART_MENU));
+	item->SetBitmap(MakeBmpBundle(wxArtProvider::GetBitmap(_T("ART_UPLOAD"), wxART_MENU)));
 	menu.Append(item);
 	item = new wxMenuItem(&menu, XRCID("ID_ADDTOQUEUE"), _("&Add to queue"), _("Add selected directory to the transfer queue"));
-	item->SetBitmap(wxArtProvider::GetBitmap(_T("ART_UPLOADADD"), wxART_MENU));
+	item->SetBitmap(MakeBmpBundle(wxArtProvider::GetBitmap(_T("ART_UPLOADADD"), wxART_MENU)));
 	menu.Append(item);
 
 	menu.AppendSeparator();

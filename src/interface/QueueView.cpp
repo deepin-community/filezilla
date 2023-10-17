@@ -45,6 +45,8 @@
 #include <powrprof.h>
 #endif
 
+using namespace std::literals;
+
 class CQueueViewDropTarget final : public CFileDropTarget<wxListCtrlEx>
 {
 public:
@@ -73,8 +75,8 @@ public:
 			pDragDropManager->pDropTarget = m_pQueueView;
 		}
 
-		auto const format = m_pDataObject->GetReceivedFormat();
-		if (format == m_pFileDataObject->GetFormat() || format == m_pLocalDataObject->GetFormat()) {
+		auto const format = GetReceivedFormat();
+		if (format == m_pFileDataObject->GetFormat() || format == LocalDataObjectFormat()) {
 			CState* const pState = CContextManager::Get()->GetCurrentContext();
 			if (!pState) {
 				return wxDragNone;
@@ -88,16 +90,16 @@ public:
 			if (path.empty()) {
 				return wxDragNone;
 			}
-
 			if (format == m_pFileDataObject->GetFormat()) {
 				pState->UploadDroppedFiles(m_pFileDataObject, path, true);
 			}
 			else {
-				pState->UploadDroppedFiles(m_pLocalDataObject, path, true);
+				pState->UploadDroppedFiles(GetLocalDataObject(), path, true);
 			}
 		}
 		else {
-			if (m_pRemoteDataObject->GetProcessId() != (int)wxGetProcessId()) {
+			auto * obj = GetRemoteDataObject();
+			if (obj->GetProcessId() != (int)wxGetProcessId()) {
 				wxMessageBoxEx(_("Drag&drop between different instances of FileZilla has not been implemented yet."));
 				return wxDragNone;
 			}
@@ -111,7 +113,7 @@ public:
 				return wxDragNone;
 			}
 
-			if (site.server != m_pRemoteDataObject->GetSite().server) {
+			if (site.server != obj->GetSite().server) {
 				wxMessageBoxEx(_("Drag&drop between different servers has not been implemented yet."));
 				return wxDragNone;
 			}
@@ -122,7 +124,7 @@ public:
 				return wxDragNone;
 			}
 
-			if (!pState->DownloadDroppedFiles(m_pRemoteDataObject, target, true)) {
+			if (!pState->DownloadDroppedFiles(obj, target, true)) {
 				return wxDragNone;
 			}
 		}
@@ -137,7 +139,7 @@ public:
 
 	virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxListCtrlEx>::OnDragOver(x, y, def);
+		def = CScrollableDropTarget::OnDragOver(x, y, def);
 		if (def == wxDragError ||
 			def == wxDragNone ||
 			def == wxDragCancel)
@@ -168,7 +170,7 @@ public:
 
 	virtual wxDragResult OnEnter(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxListCtrlEx>::OnEnter(x, y, def);
+		def = CScrollableDropTarget::OnEnter(x, y, def);
 		return OnDragOver(x, y, def);
 	}
 
@@ -216,8 +218,9 @@ CQueueView::CQueueView(CQueue* parent, int index, CMainFrame* pMainFrame, CAsync
 	, m_pMainFrame(pMainFrame)
 	, m_pAsyncRequestQueue(pAsyncRequestQueue)
 	, cert_store_(certStore)
+	, m_queue_storage(pMainFrame->GetOptions())
 {
-	wxGetApp().AddStartupProfileRecord("CQueueView::CQueueView");
+	wxGetApp().AddStartupProfileRecord("CQueueView::CQueueView"sv);
 
 	if (m_pAsyncRequestQueue) {
 		m_pAsyncRequestQueue->SetQueue(this);
@@ -290,7 +293,7 @@ bool CQueueView::QueueFile(bool const queueOnly, bool const download,
 			flags |= queue_flags::queued;
 		}
 
-		flags |= GetTransferFlags(download, site.server, *COptions::Get(), sourceFile, remotePath);
+		flags |= GetTransferFlags(download, site.server, options_, sourceFile, remotePath);
 		flags -= custom_flags_mask;
 		flags |= custom_flags;
 
@@ -344,7 +347,7 @@ bool CQueueView::QueueFiles(const bool queueOnly, const CLocalPath& localPath, c
 			continue;
 		}
 
-		std::wstring localFile = ReplaceInvalidCharacters(fileInfo.name);
+		std::wstring localFile = ReplaceInvalidCharacters(options_, fileInfo.name);
 		if (dataObject.GetServerPath().GetType() == VMS && options_.get_int(OPTION_STRIP_VMS_REVISION)) {
 			localFile = StripVMSRevision(localFile);
 		}
@@ -354,7 +357,7 @@ bool CQueueView::QueueFiles(const bool queueOnly, const CLocalPath& localPath, c
 			flags |= queue_flags::queued;
 		}
 
-		flags |= GetTransferFlags(true, dataObject.GetSite().server, *COptions::Get(), fileInfo.name, dataObject.GetServerPath());
+		flags |= GetTransferFlags(true, dataObject.GetSite().server, options_, fileInfo.name, dataObject.GetServerPath());
 
 		CFileItem* fileItem = new CFileItem(pServerItem, flags,
 			fileInfo.name, (fileInfo.name != localFile) ? localFile : std::wstring(),
@@ -385,7 +388,7 @@ bool CQueueView::QueueFiles(const bool queueOnly, Site const& site, CLocalRecurs
 				flags |= queue_flags::queued;
 			}
 
-			flags |= GetTransferFlags(false, site.server, *COptions::Get(), file.name, listing.remotePath);
+			flags |= GetTransferFlags(false, site.server, options_, file.name, listing.remotePath);
 			CFileItem* fileItem = new CFileItem(pServerItem, flags,
 				file.name, std::wstring(),
 				listing.localPath, listing.remotePath, file.size, {});
@@ -522,6 +525,14 @@ void CQueueView::ProcessNotification(t_EngineData *pEngineData, std::unique_ptr<
 	case nId_ftp_tls_resumption: {
 		auto const& notification = static_cast<FtpTlsResumptionNotification const&>(*pNotification);
 		cert_store_.SetSessionResumptionSupport(fz::to_utf8(notification.server_.GetHost()), notification.server_.GetPort(), true, true);
+		break;
+	}
+	case nId_persistent_state: {
+		if (pEngineData->pItem && pEngineData->active) {
+			PersistentStateNotification& notification = static_cast<PersistentStateNotification&>(*pNotification);
+			CFileItem & fileItem = *pEngineData->pItem;
+			fileItem.set_persistent_state(std::move(notification.persistent_state_));
+		}
 		break;
 	}
 	default:
@@ -749,7 +760,7 @@ bool CQueueView::TryStartNextTransfer()
 		rect.SetHeight(GetLineHeight());
 		m_allowBackgroundErase = false;
 		if (!pEngineData->pStatusLineCtrl) {
-			pEngineData->pStatusLineCtrl = new CStatusLineCtrl(this, pEngineData, rect);
+			pEngineData->pStatusLineCtrl = new CStatusLineCtrl(this, options_, pEngineData, rect);
 		}
 		else {
 			pEngineData->pStatusLineCtrl->ClearTransferStatus();
@@ -1072,6 +1083,7 @@ void CQueueView::ResetEngine(t_EngineData& data, const ResetReason reason)
 					RemoveItem(data.pItem, false);
 
 					CServerItem* pNewServerItem = pQueueViewSuccessful->CreateServerItem(site);
+					static_cast<CFileItem&>(*data.pItem).set_persistent_state(std::string());
 					data.pItem->UpdateTime();
 					data.pItem->SetParent(pNewServerItem);
 					data.pItem->SetStatusMessage(CFileItem::Status::none);
@@ -1103,7 +1115,7 @@ void CQueueView::ResetEngine(t_EngineData& data, const ResetReason reason)
 			}
 			CCommandQueue* pCommandQueue = pState->m_pCommandQueue;
 			if (pCommandQueue) {
-				pCommandQueue->RequestExclusiveEngine(this, false);
+				pCommandQueue->ReleaseEngine(this);
 			}
 			break;
 		}
@@ -1174,7 +1186,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 			}
 
 			CCommandQueue* pCommandQueue = pState->m_pCommandQueue;
-			pCommandQueue->RequestExclusiveEngine(this, true);
+			pCommandQueue->RequestExclusiveEngine(this);
 			return;
 		}
 
@@ -1249,20 +1261,22 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 			RefreshItem(engineData.pItem);
 
 			std::wstring extraFlags;
+			std::string persistentState;
 			auto extraData = fileItem->GetExtraData();
 			if (extraData) {
 				extraFlags = extraData->extraFlags_;
+				persistentState = extraData->persistentState_;
 			}
 
 			int res;
 			if (!fileItem->Download()) {
-				auto cmd = CFileTransferCommand(file_reader_factory(fileItem->GetLocalPath().GetPath() + fileItem->GetLocalFile()),
-					fileItem->GetRemotePath(), fileItem->GetRemoteFile(), fileItem->flags(), extraFlags);
+				auto cmd = CFileTransferCommand(fz::file_reader_factory(fileItem->GetLocalPath().GetPath() + fileItem->GetLocalFile(), m_pMainFrame->GetEngineContext().GetThreadPool()),
+					fileItem->GetRemotePath(), fileItem->GetRemoteFile(), fileItem->flags(), extraFlags, persistentState);
 				res = engineData.pEngine->Execute(cmd);
 			}
 			else {
-				auto cmd = CFileTransferCommand(file_writer_factory(fileItem->GetLocalPath().GetPath() + fileItem->GetLocalFile()),
-					fileItem->GetRemotePath(), fileItem->GetRemoteFile(), fileItem->flags(), extraFlags);
+				auto cmd = CFileTransferCommand(fz::file_writer_factory(fileItem->GetLocalPath().GetPath() + fileItem->GetLocalFile(), m_pMainFrame->GetEngineContext().GetThreadPool()),
+					fileItem->GetRemotePath(), fileItem->GetRemoteFile(), fileItem->flags(), extraFlags, persistentState);
 				res = engineData.pEngine->Execute(cmd);
 			}
 
@@ -1386,7 +1400,7 @@ bool CQueueView::SetActive(bool active)
 	return true;
 }
 
-bool CQueueView::Quit()
+bool CQueueView::Quit(bool force)
 {
 	if (!m_quit) {
 		m_quit = 1;
@@ -1406,7 +1420,7 @@ bool CQueueView::Quit()
 		canQuit = false;
 	}
 
-	if (!canQuit) {
+	if (!canQuit && !force) {
 		return false;
 	}
 
@@ -1563,7 +1577,7 @@ void CQueueView::SaveQueue(bool silent)
 
 void CQueueView::LoadQueue()
 {
-	wxGetApp().AddStartupProfileRecord("CQueueView::LoadQueue");
+	wxGetApp().AddStartupProfileRecord("CQueueView::LoadQueue"sv);
 	// We have to synchronize access to queue.xml so that multiple processed don't write
 	// to the same file or one is reading while the other one writes.
 	CInterProcessMutex mutex(MUTEX_QUEUE);
@@ -1630,7 +1644,7 @@ void CQueueView::LoadQueue()
 	m_insertionCount = 0;
 	CommitChanges();
 	if (error) {
-		wxString file = CQueueStorage::GetDatabaseFilename();
+		wxString file = m_queue_storage.GetDatabaseFilename();
 		wxString msg = wxString::Format(_("An error occurred loading the transfer queue from \"%s\".\nSome queue items might not have been restored."), file);
 		wxMessageBoxEx(msg, _("Error loading queue"), wxICON_ERROR);
 	}
@@ -2929,7 +2943,7 @@ void CQueueView::OnSize(wxSizeEvent& event)
 	event.Skip();
 }
 
-void CQueueView::RenameFileInTransfer(CFileZillaEngine *pEngine, std::wstring const& newName, bool local, writer_factory_holder & new_writer)
+void CQueueView::RenameFileInTransfer(CFileZillaEngine *pEngine, std::wstring const& newName, bool local, fz::writer_factory_holder & new_writer)
 {
 	t_EngineData* const pEngineData = GetEngineData(pEngine);
 	if (!pEngineData || !pEngineData->pItem) {
@@ -2945,7 +2959,7 @@ void CQueueView::RenameFileInTransfer(CFileZillaEngine *pEngine, std::wstring co
 		wxFileName fn(pFile->GetLocalPath().GetPath(), pFile->GetLocalFile());
 		fn.SetFullName(newName);
 		pFile->SetTargetFile(fn.GetFullName().ToStdWstring());
-		new_writer = file_writer_factory(fn.GetFullPath().ToStdWstring());
+		new_writer = fz::file_writer_factory(fn.GetFullPath().ToStdWstring(), m_pMainFrame->GetEngineContext().GetThreadPool());
 	}
 	else {
 		pFile->SetTargetFile(newName);
@@ -2954,9 +2968,8 @@ void CQueueView::RenameFileInTransfer(CFileZillaEngine *pEngine, std::wstring co
 	RefreshItem(pFile);
 }
 
-std::wstring CQueueView::ReplaceInvalidCharacters(std::wstring const& filename, bool includeQuotesAndBreaks)
+std::wstring CQueueView::ReplaceInvalidCharacters(COptionsBase & options, std::wstring const& filename, bool includeQuotesAndBreaks)
 {
-	auto& options = *COptions::Get();
 	if (!options.get_int(OPTION_INVALID_CHAR_REPLACE_ENABLE)) {
 		return filename;
 	}

@@ -53,7 +53,7 @@ void CFtpControlSocket::OnReceive()
 	size_t const max = 65536;
 
 	for (;;) {
-		int error;
+		int error{};
 
 		size_t const toRead = max - receiveBuffer_.size();
 		int read = active_layer_->read(receiveBuffer_.get(toRead), static_cast<unsigned int>(toRead), error);
@@ -146,7 +146,7 @@ void CFtpControlSocket::ParseLine(std::wstring line)
 			}
 		}
 	}
-	//Check for multi-line responses
+	// Check for multi-line responses
 	if (line.size() > 3) {
 		if (!m_MultilineResponseCode.empty()) {
 			if (line.substr(0, 4) == m_MultilineResponseCode) {
@@ -158,7 +158,14 @@ void CFtpControlSocket::ParseLine(std::wstring line)
 				m_MultilineResponseLines.clear();
 			}
 			else {
-				m_MultilineResponseLines.push_back(line);
+				if (m_MultilineResponseLines.size() < 10000) {
+					m_MultilineResponseLines.push_back(line);
+				}
+				else {
+					log(logmsg::error, _("Received multi-line response with more than %u lines."), m_MultilineResponseLines.size());
+					DoClose(FZ_REPLY_ERROR);
+					return;
+				}
 			}
 		}
 		// start of new multi-line
@@ -581,7 +588,7 @@ void CFtpControlSocket::RemoveDir(CServerPath const& path, std::wstring const& s
 	Push(std::move(pData));
 }
 
-void CFtpControlSocket::Mkdir(CServerPath const& path)
+void CFtpControlSocket::Mkdir(CServerPath const& path, transfer_flags const&)
 {
 	auto pData = std::make_unique<CFtpMkdirOpData>(*this);
 	pData->path_ = path;
@@ -638,25 +645,20 @@ int CFtpControlSocket::GetExternalIPAddress(std::string& address)
 				log(logmsg::debug_info, _("Retrieving external IP address from %s"), resolverAddress);
 
 				m_pIPResolver = std::make_unique<CExternalIPResolver>(engine_.GetThreadPool(), *this);
-				m_pIPResolver->GetExternalIP(resolverAddress, fz::address_type::ipv4);
-				if (!m_pIPResolver->Done()) {
+				auto res = m_pIPResolver->GetExternalIP(resolverAddress, fz::address_type::ipv4);
+				if (res == fz::http::continuation::wait) {
 					log(logmsg::debug_verbose, L"Waiting for resolver thread");
 					return FZ_REPLY_WOULDBLOCK;
 				}
 			}
-			if (!m_pIPResolver->Successful()) {
-				m_pIPResolver.reset();
-
+			address = m_pIPResolver->GetIP();
+			m_pIPResolver.reset();
+			if (address.empty()) {
 				log(logmsg::debug_warning, _("Failed to retrieve external IP address, using local address"));
 			}
 			else {
 				log(logmsg::debug_info, L"Got external IP address");
-				address = m_pIPResolver->GetIP();
-
 				engine_.GetOptions().set(OPTION_LASTRESOLVEDIP, fz::to_wstring(address));
-
-				m_pIPResolver.reset();
-
 				return FZ_REPLY_OK;
 			}
 		}
@@ -804,7 +806,7 @@ void CFtpControlSocket::ResetSocket()
 	m_pendingReplies = 0;
 	m_repliesToSkip = 0;
 	m_Response.clear();
-	m_MultilineResponseCode.clear();;
+	m_MultilineResponseCode.clear();
 	m_MultilineResponseLines.clear();
 	m_protectDataChannel = false;
 

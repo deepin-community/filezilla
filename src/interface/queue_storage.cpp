@@ -14,7 +14,8 @@
 enum class Column_type
 {
 	text,
-	integer
+	integer,
+	blob
 };
 
 enum _column_flags
@@ -95,6 +96,7 @@ namespace file_table_column_names
 		flags,
 		default_exists_action,
 		extra_flags,
+		persistent_state
 	};
 }
 
@@ -110,7 +112,8 @@ _column file_table_columns[] = {
 	{ "priority", Column_type::integer, 0 },
 	{ "flags", Column_type::integer, 0 },
 	{ "default_exists_action", Column_type::integer, 0 },
-	{ "extra_flags", Column_type::text, 0 }
+	{ "extra_flags", Column_type::text, 0 },
+	{ "persistent_state", Column_type::blob, 0 }
 };
 
 namespace path_table_column_names
@@ -130,6 +133,10 @@ _column path_table_columns[] = {
 class CQueueStorage::Impl final
 {
 public:
+	Impl(COptionsBase & options)
+		: options_(options)
+	{}
+
 	void CreateTables();
 	std::string CreateColumnDefs(_column const* columns, size_t count);
 
@@ -156,10 +163,12 @@ public:
 	bool Bind(sqlite3_stmt* statement, int index, std::wstring const& value);
 	bool Bind(sqlite3_stmt* statement, int index, std::string const& value);
 	bool Bind(sqlite3_stmt* statement, int index, const char* const value);
+	bool BindBlob(sqlite3_stmt* statement, int index, std::string const& value);
 	bool BindNull(sqlite3_stmt* statement, int index);
 
 	std::wstring GetColumnText(sqlite3_stmt* statement, int index);
 	std::string GetColumnTextUtf8(sqlite3_stmt* statement, int index);
+	std::string GetColumnBlob(sqlite3_stmt* statement, int index);
 	int64_t GetColumnInt64(sqlite3_stmt* statement, int index, int64_t def = 0);
 	int GetColumnInt(sqlite3_stmt* statement, int index, int def = 0);
 
@@ -193,6 +202,8 @@ public:
 
 	std::map<int64_t, CLocalPath> reverseLocalPaths_;
 	std::map<int64_t, CServerPath> reverseRemotePaths_;
+
+	COptionsBase & options_;
 };
 
 
@@ -295,7 +306,7 @@ bool CQueueStorage::Impl::MigrateSchema()
 	bool ret = sqlite3_exec(db_, "PRAGMA user_version", int_callback, &version, 0) == SQLITE_OK;
 
 	if (ret) {
-		if (version > 7) {
+		if (version > 8) {
 			ret = false;
 		}
 		else if (version > 0) {
@@ -334,9 +345,12 @@ bool CQueueStorage::Impl::MigrateSchema()
 				ret &= sqlite3_exec(db_, "DROP TABLE files", 0, 0, 0) == SQLITE_OK;
 				ret &= sqlite3_exec(db_, "ALTER TABLE files2 RENAME TO files", 0, 0, 0) == SQLITE_OK;
 			}
+			if (ret && version < 8) {
+				ret = sqlite3_exec(db_, "ALTER TABLE files ADD COLUMN persistent_state BLOB DEFAULT NULL", 0, 0, 0) == SQLITE_OK;
+			}
 		}
-		if (ret && version != 7) {
-			ret = sqlite3_exec(db_, "PRAGMA user_version = 7", 0, 0, 0) == SQLITE_OK;
+		if (ret && version != 8) {
+			ret = sqlite3_exec(db_, "PRAGMA user_version = 8", 0, 0, 0) == SQLITE_OK;
 		}
 	}
 
@@ -421,6 +435,9 @@ std::string CQueueStorage::Impl::CreateColumnDefs(_column const* columns, size_t
 		query += columns[i].name;
 		if (columns[i].type == Column_type::integer) {
 			query += " INTEGER";
+		}
+		else if (columns[i].type == Column_type::blob) {
+			query += " BLOB";
 		}
 		else {
 			query += " TEXT";
@@ -636,10 +653,15 @@ bool CQueueStorage::Impl::BindNull(sqlite3_stmt* statement, int index)
 	return sqlite3_bind_null(statement, index) == SQLITE_OK;
 }
 
+bool CQueueStorage::Impl::BindBlob(sqlite3_stmt* statement, int index, std::string const& value)
+{
+	return sqlite3_bind_blob(statement, index, value.c_str(), value.size(), SQLITE_TRANSIENT) == SQLITE_OK;
+}
+
 
 bool CQueueStorage::Impl::SaveServer(CServerItem const& item)
 {
-	bool kiosk_mode = COptions::Get()->get_int(OPTION_DEFAULT_KIOSKMODE) != 0;
+	bool kiosk_mode = options_.get_int(OPTION_DEFAULT_KIOSKMODE) != 0;
 
 	Site const& site = item.GetSite();
 
@@ -830,6 +852,13 @@ bool CQueueStorage::Impl::SaveFile(CFileItem const& file)
 		else {
 			BindNull(insertFileQuery_, file_table_column_names::extra_flags);
 		}
+
+		if (!extra_data->persistentState_.empty()) {
+			Bind(insertFileQuery_, file_table_column_names::persistent_state, extra_data->persistentState_);
+		}
+		else {
+			BindNull(insertFileQuery_, file_table_column_names::persistent_state);
+		}
 	}
 	else {
 		BindNull(insertFileQuery_, file_table_column_names::target_file);
@@ -948,6 +977,19 @@ std::string CQueueStorage::Impl::GetColumnTextUtf8(sqlite3_stmt* statement, int 
 	if (text) {
 		int len = sqlite3_column_bytes(statement, index);
 		return std::string(text, len);
+	}
+
+	return std::string();
+}
+
+std::string CQueueStorage::Impl::GetColumnBlob(sqlite3_stmt* statement, int index)
+{
+	int len = sqlite3_column_bytes(statement, index);
+	if (len) {
+		char const* text = reinterpret_cast<char const*>(sqlite3_column_blob(statement, index));
+		if (text) {
+			return std::string(text, len);
+		}
 	}
 
 	return std::string();
@@ -1137,6 +1179,7 @@ int64_t CQueueStorage::Impl::ParseFileFromRow(CFileItem** pItem)
 		int priority = GetColumnInt(selectFilesQuery_, file_table_column_names::priority, static_cast<int>(QueuePriority::normal));
 
 		std::wstring extraFlags = GetColumnText(selectFilesQuery_, file_table_column_names::extra_flags);
+		std::string persistentState = GetColumnTextUtf8(selectFilesQuery_, file_table_column_names::persistent_state);
 
 		int overwrite_action = GetColumnInt(selectFilesQuery_, file_table_column_names::default_exists_action, CFileExistsNotification::unknown);
 
@@ -1148,7 +1191,7 @@ int64_t CQueueStorage::Impl::ParseFileFromRow(CFileItem** pItem)
 			return INVALID_DATA;
 		}
 
-		CFileItem* fileItem = new CFileItem(0, flags | queue_flags::queued, sourceFile, targetFile, localPath, remotePath, size, extraFlags);
+		CFileItem* fileItem = new CFileItem(0, flags | queue_flags::queued, std::move(sourceFile), std::move(targetFile), std::move(localPath), std::move(remotePath), size, std::move(extraFlags), std::move(persistentState));
 		*pItem = fileItem;
 		fileItem->SetPriorityRaw(QueuePriority(priority));
 		fileItem->m_errorCount = errorCount;
@@ -1199,8 +1242,8 @@ void CQueueStorage::Impl::Close()
 	db_ = 0;
 }
 
-CQueueStorage::CQueueStorage()
-: d_(new Impl)
+CQueueStorage::CQueueStorage(COptionsBase& options)
+: d_(new Impl(options))
 {
 	int ret = sqlite3_open(fz::to_utf8(GetDatabaseFilename()).c_str(), &d_->db_ );
 	if (ret != SQLITE_OK) {
@@ -1358,7 +1401,7 @@ bool CQueueStorage::Clear()
 
 std::wstring CQueueStorage::GetDatabaseFilename()
 {
-	return COptions::Get()->get_string(OPTION_DEFAULT_SETTINGSDIR) + L"queue.sqlite3";
+	return d_->options_.get_string(OPTION_DEFAULT_SETTINGSDIR) + L"queue.sqlite3";
 }
 
 bool CQueueStorage::BeginTransaction()

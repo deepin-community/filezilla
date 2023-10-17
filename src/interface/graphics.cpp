@@ -2,18 +2,88 @@
 
 #include "graphics.h"
 
+#include <wx/combobox.h>
+#include <wx/listctrl.h>
+
+namespace {
+wxColour const background_colors[] = {
+	wxColour(),
+	wxColour(255, 0, 0, 32),
+	wxColour(0, 255, 0, 32),
+	wxColour(0, 0, 255, 32),
+	wxColour(255, 255, 0, 32),
+	wxColour(0, 255, 255, 32),
+	wxColour(255, 0, 255, 32),
+	wxColour(255, 128, 0, 32) };
+}
+
+wxColor site_colour_to_wx(site_colour c)
+{
+	auto index = static_cast<size_t>(c);
+	if (index < sizeof(background_colors) / sizeof(*background_colors)){
+		return background_colors[index];
+	}
+	return background_colors[0];
+}
+
 CWindowTinter::CWindowTinter(wxWindow& wnd)
 	: m_wnd(wnd)
 {
+	m_wnd.Bind(wxEVT_SYS_COLOUR_CHANGED, &CWindowTinter::OnColorChange, this);
+}
+
+CWindowTinter::~CWindowTinter()
+{
+	m_wnd.Unbind(wxEVT_SYS_COLOUR_CHANGED, &CWindowTinter::OnColorChange, this);
+}
+
+void CWindowTinter::OnColorChange(wxSysColourChangedEvent &)
+{
+	SetBackgroundTint(site_colour_to_wx(tint_));
+}
+
+void CWindowTinter::SetBackgroundTint(site_colour tint)
+{
+	tint_ = tint;
+	SetBackgroundTint(site_colour_to_wx(tint));
+}
+
+wxColour CWindowTinter::GetOriginalColor()
+{
+#ifndef __WXMSW__
+	auto listctrl = dynamic_cast<wxListCtrl*>(m_wnd.GetParent());
+	if (listctrl && reinterpret_cast<wxWindow*>(listctrl->m_mainWin) == &m_wnd) {
+		return listctrl->GetDefaultAttributes().colBg;
+	}
+#endif
+
+#ifdef __WXMAC__
+	auto combo = dynamic_cast<wxComboBox*>(&m_wnd);
+	if (combo) {
+		wxColour c = wxTextCtrl::GetClassDefaultAttributes().colBg;
+#if wxCHECK_VERSION(3, 2, 1)
+		// In old versions of macOS, the wrong color may be reported. Try to detect it and just default to white.
+		if ((!c.IsOk() || c == *wxBLACK) && !wxSystemSettingsNative::GetAppearance().IsDark()) {
+			return wxColour(255, 255, 255);
+		}
+#endif
+		return c;
+	}
+#endif
+	return m_wnd.GetDefaultAttributes().colBg;
 }
 
 void CWindowTinter::SetBackgroundTint(wxColour const& tint)
 {
-	if (!m_originalColor.IsOk()) {
-		m_originalColor = m_wnd.GetBackgroundColour();
+	if (!tint.IsOk() && dynamic_cast<wxComboBox*>(&m_wnd)) {
+		m_wnd.SetBackgroundColour(wxColour());
+		m_wnd.Refresh();
+		return;
 	}
 
-	wxColour const newColour = AlphaComposite_Over(m_originalColor, tint);
+	wxColour originalColor = GetOriginalColor();
+
+	wxColour const newColour = tint.IsOk() ? AlphaComposite_Over(originalColor, tint) : originalColor;
 	if (newColour != m_wnd.GetBackgroundColour()) {
 		if (m_wnd.SetBackgroundColour(newColour)) {
 			m_wnd.Refresh();

@@ -25,6 +25,11 @@ public:
 #endif
 	}
 
+	virtual wxVisualAttributes GetDefaultAttributes() const override
+	{
+		return GetParent()->GetDefaultAttributes();
+	}
+
 	void SetText(wxString const& text)
 	{
 		if (text == m_text) {
@@ -39,8 +44,8 @@ public:
 
 	bool AcceptsFocus() const { return false; }
 
-	void SetBackgroundTint(wxColour const& colour) {
-		m_tinter.SetBackgroundTint(colour);
+	void SetBackgroundTint(site_colour tint) {
+		m_tinter.SetBackgroundTint(tint);
 	}
 
 	void Reposition();

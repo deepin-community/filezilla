@@ -18,13 +18,15 @@ class COptions;
 class CNetConfWizard final : public wxWizard, protected CWrapEngine, protected fz::event_handler
 {
 public:
-	CNetConfWizard(wxWindow* parent, COptions* pOptions, CFileZillaEngineContext & context);
+	CNetConfWizard(wxWindow* parent, CFileZillaEngineContext & context);
 	virtual ~CNetConfWizard();
 
 	bool Load();
 	bool Run();
 
 protected:
+
+	bool CreatePages();
 
 	void PrintMessage(std::wstring const& msg, int type);
 
@@ -33,7 +35,6 @@ protected:
 	CFileZillaEngineContext & engine_context_;
 
 	wxWindow* const m_parent;
-	COptions* const m_pOptions;
 
 	std::vector<wxWizardPageSimple*> m_pages;
 

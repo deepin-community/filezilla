@@ -6,10 +6,16 @@
 #include <wx/statusbr.h>
 #include <wx/timer.h>
 
-class CFilelistStatusBar final : public wxStatusBar, public COptionChangeEventHandler
+#ifdef __WXMAC__
+typedef wxStatusBarGeneric CFilelistStatusBarBase;
+#else
+typedef wxStatusBar CFilelistStatusBarBase;
+#endif
+
+class CFilelistStatusBar final : public CFilelistStatusBarBase, public COptionChangeEventHandler
 {
 public:
-	CFilelistStatusBar(wxWindow* pParent);
+	CFilelistStatusBar(wxWindow* pParent, COptionsBase & options);
 	~CFilelistStatusBar();
 
 	void SetDirectoryContents(int count_files, int count_dirs, int64_t total_size, int unknown_size, int hidden);
@@ -53,6 +59,8 @@ protected:
 
 	wxString m_empty_string;
 	wxString m_offline_string;
+
+	COptionsBase & options_;
 
 	DECLARE_EVENT_TABLE()
 	void OnTimer(wxTimerEvent& event);

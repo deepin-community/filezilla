@@ -39,8 +39,10 @@
 #include "../include/optionsbase.h"
 
 #include <libfilezilla/buffer.hpp>
+#include <libfilezilla/event_handler.hpp>
 #include <libfilezilla/uri.hpp>
 
+#include <deque>
 #include <functional>
 #include <list>
 
@@ -57,18 +59,7 @@ enum updaterOptions : unsigned {
 	OPTIONS_UPDATER_NUM
 };
 
-unsigned int FZCUI_PUBLIC_SYMBOL register_updater_options();
-
-inline optionsIndex mapOption(updaterOptions opt)
-{
-	static unsigned int const offset = register_updater_options();
-
-	auto ret = optionsIndex::invalid;
-	if (opt < OPTIONS_UPDATER_NUM) {
-		return static_cast<optionsIndex>(opt + offset);
-	}
-	return ret;
-}
+optionsIndex FZCUI_PUBLIC_SYMBOL mapOption(updaterOptions opt);
 
 struct build final
 {

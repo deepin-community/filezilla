@@ -10,6 +10,7 @@ public:
 	int gap{};
 	int border{};
 	int indent{};
+	wxSize defTextCtrlSize;
 
 	int dlgUnits(int num) const;
 
@@ -53,7 +54,10 @@ public:
 
 	bool ReplaceControl(wxWindow* old, wxWindow* wnd);
 
+	// Spontaneously generated dialogs
 	static bool CanShowPopupDialog(wxTopLevelWindow * parent = 0);
+
+	static bool IsActiveTLW(wxTopLevelWindow * parent = 0);
 
 	DialogLayout const& layout();
 
@@ -85,7 +89,7 @@ wxWindowID const nullID = wxID_HIGHEST;
 
 std::wstring LabelEscape(std::wstring_view const& label, size_t maxlen = 2000);
 
-#ifdef __WXMAC__
+#if defined(__WXMAC__) && !wxCHECK_VERSION(3, 2, 1)
 void FixPasswordPaste(std::vector<wxAcceleratorEntry> & entries);
 #endif
 

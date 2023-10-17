@@ -7,6 +7,7 @@
 #include "drop_target_ex.h"
 #include "filezillaapp.h"
 #include "inputdialog.h"
+#include "loginmanager.h"
 #include "Options.h"
 #include "sitemanager_site.h"
 #include "themeprovider.h"
@@ -841,7 +842,7 @@ bool CSiteManagerDialog::SaveChild(pugi::xml_node element, wxTreeItemId child)
 			bookmarkChild = tree_->GetNextChild(child, cookie);
 		}
 
-		CSiteManager::Save(node, *data->m_site);
+		CSiteManager::Save(node, *data->m_site, CLoginManager::Get(), options_);
 
 		if (data->connected_item != -1) {
 			(*m_connected_sites)[data->connected_item].site = *data->m_site;
@@ -1053,7 +1054,7 @@ void CSiteManagerDialog::OnDelete(wxCommandEvent&)
 		return;
 	}
 
-	CConditionalDialog dlg(this, CConditionalDialog::sitemanager_confirmdelete, CConditionalDialog::yesno);
+	CConditionalDialog dlg(this, CConditionalDialog::sitemanager_confirmdelete, CConditionalDialog::yesno, options_);
 	dlg.SetTitle(_("Delete Site Manager entries"));
 
 	dlg.AddText(_("Do you really want to delete the selected entries?"));
@@ -1125,6 +1126,13 @@ void CSiteManagerDialog::OnSelChanged(wxTreeEvent& evt)
 		tree_->SafeSelectItem(evt.GetItem());
 		m_is_deleting = false;
 	}
+
+#if !defined(__WXMSW__) && wxCHECK_VERSION(3, 2, 1)
+	auto focused = tree_->GetFocusedItem();
+	if (focused) {
+		tree_->EnsureVisible(focused);
+	}
+#endif
 
 	wxWindowUpdateLocker l(this);
 	SetCtrlState();
@@ -1916,8 +1924,8 @@ void CSiteManagerDialog::OnExportSelected(wxCommandEvent&)
 
 	wxTreeItemId ancestor;
 	for (auto const& item : selections) {
-		if (!item.IsOk() || item == tree_->GetRootItem()) {
-			return;
+		if (!item.IsOk()) {
+			continue;
 		}
 
 		// Only keep items that do not have an ancestor that is already being copied
@@ -1927,7 +1935,12 @@ void CSiteManagerDialog::OnExportSelected(wxCommandEvent&)
 		}
 		if (!parent) {
 			ancestor = item;
-			SaveChild(servers, item);
+			if (item == m_ownSites || item == m_predefinedSites) {
+				Save(servers, item);
+			}
+			else {
+				SaveChild(servers, item);
+			}
 		}
 	}
 

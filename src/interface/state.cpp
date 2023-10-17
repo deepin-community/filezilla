@@ -226,7 +226,7 @@ CState::CState(CMainFrame &mainFrame)
 {
 	m_title = _("Not connected");
 
-	m_pComparisonManager = new CComparisonManager(*this);
+	m_pComparisonManager = new CComparisonManager(*this, m_mainFrame.GetOptions());
 
 	m_pLocalRecursiveOperation = new CLocalRecursiveOperation(*this);
 	m_pRemoteRecursiveOperation = new CRemoteRecursiveOperation(*this);
@@ -1027,7 +1027,7 @@ bool CState::DownloadDroppedFiles(const CRemoteDataObject* pRemoteDataObject, co
 		}
 
 		CLocalPath newPath(path);
-		newPath.AddSegment(CQueueView::ReplaceInvalidCharacters(fileInfo.name));
+		newPath.AddSegment(CQueueView::ReplaceInvalidCharacters(m_mainFrame.GetOptions(), fileInfo.name));
 		root.add_dir_to_visit(pRemoteDataObject->GetServerPath(), fileInfo.name, newPath, fileInfo.link);
 	}
 

@@ -91,15 +91,16 @@ BEGIN_EVENT_TABLE(CFastTextCtrl, wxNavigationEnabled<wxTextCtrl>)
 END_EVENT_TABLE()
 
 
-CStatusView::CStatusView(wxWindow* parent, wxWindowID id)
+CStatusView::CStatusView(wxWindow* parent, COptionsBase & options)
 	: COptionChangeEventHandler(this)
+	, options_(options)
 {
 #if defined(__WXMAC__) && wxCHECK_VERSION(3, 1, 0)
 	int const border = wxBORDER_NONE;
 #else
 	int const border = wxBORDER_SUNKEN;
 #endif
-	Create(parent, id, wxDefaultPosition, wxDefaultSize, border);
+	Create(parent, nullID, wxDefaultPosition, wxDefaultSize, border);
 	m_pTextCtrl = new CFastTextCtrl(this);
 
 #ifdef __WXMAC__
@@ -114,17 +115,18 @@ CStatusView::CStatusView(wxWindow* parent, wxWindowID id)
 #endif
 
 	InitDefAttr();
+	Bind(wxEVT_SYS_COLOUR_CHANGED, [this](wxSysColourChangedEvent&) { InitDefAttr(); });
 
 	m_shown = IsShown();
 
 	SetBackgroundStyle(wxBG_STYLE_SYSTEM);
 
-	COptions::Get()->watch(OPTION_MESSAGELOG_TIMESTAMP, this);
+	options_.watch(OPTION_MESSAGELOG_TIMESTAMP, this);
 }
 
 CStatusView::~CStatusView()
 {
-	COptions::Get()->unwatch_all(this);
+	options_.unwatch_all(this);
 }
 
 void CStatusView::OnSize(wxSizeEvent &)
@@ -276,7 +278,7 @@ void CStatusView::AddToLog(logmsg::type messagetype, std::wstring && message, fz
 
 void CStatusView::InitDefAttr()
 {
-	m_showTimestamps = COptions::Get()->get_int(OPTION_MESSAGELOG_TIMESTAMP) != 0;
+	m_showTimestamps = options_.get_int(OPTION_MESSAGELOG_TIMESTAMP) != 0;
 	m_lastTime = fz::datetime::now();
 	m_lastTimeString = m_lastTime.format(_T("%H:%M:%S\t"), fz::datetime::local);
 
@@ -300,20 +302,25 @@ void CStatusView::InitDefAttr()
 	dc.GetTextExtent(_("Error:") + _T(" "), &width, &height);
 	int maxPrefixWidth = width;
 	dc.GetTextExtent(_("Command:") + _T(" "), &width, &height);
-	if (width > maxPrefixWidth)
+	if (width > maxPrefixWidth) {
 		maxPrefixWidth = width;
+	}
 	dc.GetTextExtent(_("Response:") + _T(" "), &width, &height);
-	if (width > maxPrefixWidth)
+	if (width > maxPrefixWidth) {
 		maxPrefixWidth = width;
+	}
 	dc.GetTextExtent(_("Trace:") + _T(" "), &width, &height);
-	if (width > maxPrefixWidth)
+	if (width > maxPrefixWidth) {
 		maxPrefixWidth = width;
+	}
 	dc.GetTextExtent(_("Listing:") + _T(" "), &width, &height);
-	if (width > maxPrefixWidth)
+	if (width > maxPrefixWidth) {
 		maxPrefixWidth = width;
+	}
 	dc.GetTextExtent(_("Status:") + _T(" "), &width, &height);
-	if (width > maxPrefixWidth)
+	if (width > maxPrefixWidth) {
 		maxPrefixWidth = width;
+	}
 
 #ifdef __WXMAC__
 	wxCoord spaceWidth;
@@ -443,7 +450,7 @@ void CStatusView::OnContextMenu(wxContextMenuEvent&)
 	menu.Append(XRCID("ID_COPYTOCLIPBOARD"), _("&Copy to clipboard"));
 	menu.Append(XRCID("ID_CLEARALL"), _("C&lear all"));
 
-	menu.Check(XRCID("ID_SHOW_DETAILED_LOG"), COptions::Get()->get_int(OPTION_LOGGING_SHOW_DETAILED_LOGS) != 0);
+	menu.Check(XRCID("ID_SHOW_DETAILED_LOG"), options_.get_int(OPTION_LOGGING_SHOW_DETAILED_LOGS) != 0);
 
 	CState* pState = CContextManager::Get()->GetCurrentContext();
 	if (pState) {
@@ -459,7 +466,7 @@ void CStatusView::OnContextMenu(wxContextMenuEvent&)
 
 	PopupMenu(&menu);
 
-	COptions::Get()->set(OPTION_LOGGING_SHOW_DETAILED_LOGS, menu.IsChecked(XRCID("ID_SHOW_DETAILED_LOG")) ? 1 : 0);
+	options_.set(OPTION_LOGGING_SHOW_DETAILED_LOGS, menu.IsChecked(XRCID("ID_SHOW_DETAILED_LOG")) ? 1 : 0);
 }
 
 void CStatusView::OnClear(wxCommandEvent&)

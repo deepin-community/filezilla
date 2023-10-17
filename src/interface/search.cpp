@@ -61,12 +61,7 @@ inline int DoCmpName(CRemoteSearchFileData const& data1, CRemoteSearchFileData c
 	}
 
 	if (!res) {
-		if (data1.path < data2.path) {
-			res = -1;
-		}
-		else if (data2.path < data1.path) {
-			res = 1;
-		}
+		res = data1.path.compare_case(data2.path);
 	}
 
 	return res;
@@ -91,12 +86,7 @@ inline int DoCmpName(CLocalSearchFileData const& data1, CLocalSearchFileData con
 	}
 
 	if (!res) {
-		if (data1.path < data2.path) {
-			res = -1;
-		}
-		else if (data2.path < data1.path) {
-			res = 1;
-		}
+		res = data1.path.compare_case(data2.path);
 	}
 
 	return res;
@@ -626,7 +616,7 @@ CSearchDialog::CSearchDialog(wxWindow* parent, CState& state, CQueueView* pQueue
 	, m_pQueue(pQueue)
 	, options_(options)
 {
-	m_pComparisonManager = new CComparisonManager(state);
+	m_pComparisonManager = new CComparisonManager(state, options);
 }
 
 CSearchDialog::~CSearchDialog()
@@ -719,13 +709,13 @@ bool CSearchDialog::Load()
 	resultSizer->Add(new wxListCtrl(this, XRCID("ID_RESULTS"), wxDefaultPosition, wxDefaultSize, wxLC_REPORT), 0, wxGROW);
 	resultSizer->Add(new wxListCtrl(this, XRCID("ID_REMOTE_RESULTS"), wxDefaultPosition, wxDefaultSize, wxLC_REPORT), 0, wxGROW);
 
-	CFilelistStatusBar* pStatusBar = new CFilelistStatusBar(this);
+	CFilelistStatusBar* pStatusBar = new CFilelistStatusBar(this, options_);
 	pStatusBar->SetEmptyString(_("No search results"));
 	pStatusBar->SetConnected(true);
 
 	resultSizer->Add(pStatusBar, 0, wxGROW, lay.border);
 
-	m_remoteStatusBar = new CFilelistStatusBar(this);
+	m_remoteStatusBar = new CFilelistStatusBar(this, options_);
 	m_remoteStatusBar->SetEmptyString(_("No search results"));
 	m_remoteStatusBar->SetConnected(true);
 
@@ -1103,11 +1093,11 @@ void CSearchDialog::OnSearch(wxCommandEvent&)
 	}
 
 	if (mode_ == search_mode::comparison) {
-		if (m_results->m_sortColumn != 0) {
+		if (m_results->m_sortColumn != 0 && m_results->m_sortColumn != 1) {
 			m_results->SortList(0);
 		}
-		if (m_remoteResults->m_sortColumn != 0) {
-			m_remoteResults->SortList(0);
+		if (m_remoteResults->m_sortColumn != m_results->m_sortColumn || m_remoteResults->m_sortDirection != m_results->m_sortDirection) {
+			m_remoteResults->SortList(m_results->m_sortColumn, m_results->m_sortDirection);
 		}
 
 		m_remoteResults->clear();
@@ -1489,7 +1479,7 @@ void CSearchDialog::OnDownload(wxCommandEvent&)
 		}
 
 		CServerPath remote_path = entry.path;
-		std::wstring localName = CQueueView::ReplaceInvalidCharacters(entry.name);
+		std::wstring localName = CQueueView::ReplaceInvalidCharacters(options_, entry.name);
 		if (!entry.is_dir() && remote_path.GetType() == VMS && options_.get_int(OPTION_STRIP_VMS_REVISION))
 			localName = StripVMSRevision(localName);
 
@@ -1570,7 +1560,7 @@ void CSearchDialog::OnUpload(wxCommandEvent&)
 		}
 
 		CLocalPath local_path = entry.path;
-		std::wstring localName = CQueueView::ReplaceInvalidCharacters(entry.name);
+		std::wstring localName = CQueueView::ReplaceInvalidCharacters(options_, entry.name);
 
 		m_pQueue->QueueFile(!start, false,
 			entry.name, (localName != entry.name) ? localName : std::wstring(),
@@ -1642,7 +1632,7 @@ void CSearchDialog::OnEdit(wxCommandEvent&)
 	}
 
 	if (selected_files.size() > 10) {
-		CConditionalDialog dlg(this, CConditionalDialog::many_selected_for_edit, CConditionalDialog::yesno);
+		CConditionalDialog dlg(this, CConditionalDialog::many_selected_for_edit, CConditionalDialog::yesno, options_);
 		dlg.SetTitle(_("Confirmation needed"));
 		dlg.AddText(_("You have selected more than 10 files for editing, do you really want to continue?"));
 
@@ -2038,7 +2028,7 @@ void CSearchDialog::OnShowFileManager(wxCommandEvent& event)
 	}
 
 	if (selected_item_list.size() > 10) {
-		CConditionalDialog dlg(this, CConditionalDialog::many_selected_for_edit, CConditionalDialog::yesno);
+		CConditionalDialog dlg(this, CConditionalDialog::many_selected_for_edit, CConditionalDialog::yesno, options_);
 		dlg.SetTitle(_("Confirmation needed"));
 		dlg.AddText(_("You have selected more than 10 files or directories to open, do you really want to continue?"));
 

@@ -31,9 +31,6 @@ namespace {
 	auto const platform_name = "unix";
 #endif
 
-option_registrator r(&register_common_options);
-}
-
 unsigned int register_common_options()
 {
 	// Note: A few options are versioned due to a changed
@@ -53,6 +50,9 @@ unsigned int register_common_options()
 	});
 
 	return value;
+}
+
+option_registrator r(&register_common_options);
 }
 
 optionsIndex mapOption(commonOptions opt)
@@ -326,7 +326,7 @@ CLocalPath XmlOptions::InitSettingsDir()
 	}
 
 	if (!p.empty() && !p.Exists()) {
-		fz::mkdir(fz::to_native(p.GetPath()), true, fz::mkdir_permissions::cur_user);
+		fz::mkdir(fz::to_native(p.GetPath()), true, fz::mkdir_permissions::cur_user_and_admins);
 	}
 
 	set(OPTION_DEFAULT_SETTINGSDIR, p.GetPath(), true);

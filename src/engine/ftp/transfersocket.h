@@ -17,6 +17,11 @@ enum class TransferMode
 
 namespace fz {
 class tls_layer;
+
+#ifndef FZ_WINDOWS
+#define HAVE_ASCII_TRANSFORM 1
+class ascii_layer;
+#endif
 }
 
 class CTransferSocket final : public fz::event_handler
@@ -26,7 +31,7 @@ public:
 	virtual ~CTransferSocket();
 
 	std::wstring SetupActiveTransfer(std::string const& ip);
-	bool SetupPassiveTransfer(std::wstring const& host, int port);
+	bool SetupPassiveTransfer(std::wstring const& host, unsigned short port);
 
 	void SetActive();
 
@@ -36,8 +41,8 @@ public:
 
 	TransferEndReason GetTransferEndreason() const { return m_transferEndReason; }
 
-	void set_reader(std::unique_ptr<reader_base> && reader, bool ascii);
-	void set_writer(std::unique_ptr<writer_base> && writer, bool ascii);
+	void set_reader(std::unique_ptr<fz::reader_base> && reader, bool ascii);
+	void set_writer(std::unique_ptr<fz::writer_base> && writer, bool ascii);
 
 	void ContinueWithoutSesssionResumption();
 
@@ -55,8 +60,8 @@ protected:
 	void OnSocketEvent(fz::socket_event_source* source, fz::socket_event_flag t, int error);
 	void OnConnect();
 	void OnAccept(int error);
-	void OnReceive();
-	void OnSend();
+	bool OnReceive();
+	bool OnSend();
 	void OnSocketError(int error);
 	void OnTimer(fz::timer_id);
 
@@ -67,8 +72,7 @@ protected:
 	void SetSocketBufferSizes(fz::socket_base & socket);
 
 	virtual void operator()(fz::event_base const& ev);
-	void OnInput(reader_base* reader);
-	void OnWrite(writer_base* reader);
+	void OnBufferAvailability(fz::aio_waitable const* w);
 
 	// Will be set only while creating active mode connections
 	std::unique_ptr<fz::listen_socket> socketServer_;
@@ -90,6 +94,10 @@ protected:
 	std::unique_ptr<fz::rate_limited_layer> ratelimit_layer_;
 	std::unique_ptr<CProxySocket> proxy_layer_;
 	std::unique_ptr<fz::tls_layer> tls_layer_;
+#if HAVE_ASCII_TRANSFORM
+	std::unique_ptr<fz::ascii_layer> ascii_layer_;
+	bool use_ascii_{};
+#endif
 
 	fz::socket_layer* active_layer_{};
 
@@ -98,12 +106,10 @@ protected:
 	// On uploads, 1 after first WSAE_WOULDBLOCK
 	int m_madeProgress{};
 
-	std::unique_ptr<reader_base> reader_;
-	std::unique_ptr<writer_base> writer_;
-	fz::nonowning_buffer buffer_;
+	std::unique_ptr<fz::reader_base> reader_;
+	std::unique_ptr<fz::writer_base> writer_;
+	fz::buffer_lease buffer_;
 	size_t resumetest_{};
-
-	fz::buffer line_ending_buffer_;
 };
 
 #endif

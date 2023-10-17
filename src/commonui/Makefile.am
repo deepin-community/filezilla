@@ -26,12 +26,14 @@ libfzclient_commonui_private_la_SOURCES = \
 	misc.cpp \
 	remote_recursive_operation.cpp \
 	options.cpp \
+	protect.cpp \
 	site.cpp \
 	site_manager.cpp \
 	updater.cpp \
 	updater_cert.cpp \
 	xml_cert_store.cpp \
-	xml_file.cpp
+	xml_file.cpp \
+	xmlfunctions.cpp
 
 noinst_HEADERS = \
 	auto_ascii_files.h \
@@ -46,15 +48,18 @@ noinst_HEADERS = \
 	login_manager.h \
 	misc.h \
 	options.h \
+	protect.h \
 	recursive_operation.h \
 	remote_recursive_operation.h \
 	site.h \
+	site_color.h \
 	site_manager.h \
 	updater.h \
 	updater_cert.h \
 	visibility.h \
 	xml_cert_store.h \
-	xml_file.h
+	xml_file.h \
+	xmlfunctions.h
 
 if MINGW
 libfzclient_commonui_private_la_LDFLAGS += -lole32 -Wl,-luuid
@@ -68,7 +73,9 @@ libfzclient_commonui_private_mac_la_CPPFLAGS = -I$(top_builddir)/config
 libfzclient_commonui_private_mac_la_CPPFLAGS += $(LIBFILEZILLA_CFLAGS)
 libfzclient_commonui_private_mac_la_CPPFLAGS += -DBUILDING_FZ_COMMONUI
 
-libfzclient_commonui_private_mac_la_CXXFLAGS = -fvisibility=hidden
+libfzclient_commonui_private_mac_la_LIBTOOLFLAGS = --tag=CXX
+
+libfzclient_commonui_private_mac_la_OBJCXXFLAGS = -fvisibility=hidden
 
 libfzclient_commonui_private_mac_la_SOURCES = \
 	fz_paths_osx.mm

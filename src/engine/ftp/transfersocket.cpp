@@ -16,176 +16,8 @@
 
 using namespace std::literals;
 
-#ifndef FZ_WINDOWS
-#define HAVE_ASCII_TRANSFORM 1
-#endif
-
 #if HAVE_ASCII_TRANSFORM
-namespace {
-class ascii_writer final : public writer_base, public fz::event_handler
-{
-public:
-	ascii_writer(CFileZillaEnginePrivate& engine, fz::event_handler * handler, std::unique_ptr<writer_base> && writer)
-		: writer_base(writer->name(), engine, handler, true)
-		, fz::event_handler(engine.event_loop_)
-		, writer_(std::move(writer))
-	{
-		writer_->set_handler(this);
-	}
-
-	~ascii_writer() {
-		writer_.reset();
-		remove_handler();
-	}
-
-	virtual uint64_t size() const override
-	{
-		return writer_->size();
-	}
-
-	virtual get_write_buffer_result get_write_buffer(fz::nonowning_buffer & last_written) override
-	{
-		transform(last_written);
-		get_write_buffer_result r = writer_->get_write_buffer(last_written);
-		if (r.type_ == aio_result::ok) {
-			if (was_cr_) {
-				r.buffer_.append('\r');
-				was_cr_ = false;
-			}
-		}
-		return r;
-	}
-
-	virtual aio_result finalize(fz::nonowning_buffer & last_written) override
-	{
-		transform(last_written);
-		if (was_cr_) {
-			last_written.append('\r');
-			was_cr_ = false;
-		}
-		return writer_->finalize(last_written);
-	}
-
-private:
-	void transform(fz::nonowning_buffer & b)
-	{
-		if (!b.empty()) {
-			auto * const start = b.get();
-			auto *p = start;
-			auto *q = start;
-			auto * const end = start + b.size();
-			while (p != end) {
-				auto c = *(p++);
-				if (c == '\r') {
-					was_cr_ = true;
-				}
-				else if (c == '\n') {
-					was_cr_ = false;
-					*(q++) = c;
-				}
-				else {
-					if (was_cr_) {
-						*(q++) = '\r';
-						was_cr_ = false;
-					}
-					*(q++) = c;
-				}
-			}
-			b.resize(q - start);
-		}
-	}
-
-	std::unique_ptr<writer_base> writer_;
-
-	virtual void operator()(fz::event_base const&) override
-	{
-		if (handler_) {
-			handler_->operator()(write_ready_event(this));
-		}
-	}
-
-	bool was_cr_{};
-};
-
-class ascii_reader final : public reader_base, public fz::event_handler
-{
-public:
-	ascii_reader(CFileZillaEnginePrivate& engine, fz::event_handler * handler, std::unique_ptr<reader_base> && reader)
-		: reader_base(reader->name(), engine, handler)
-		, fz::event_handler(engine.event_loop_)
-		, reader_(std::move(reader))
-	{
-		reader_->set_handler(this);
-		size_ = reader_->size();
-	}
-
-	~ascii_reader()
-	{
-		reader_.reset();
-		remove_handler();
-	}
-
-	virtual aio_result seek(uint64_t, uint64_t = aio_base::nosize) override
-	{
-		return aio_result::error;
-	}
-
-	virtual read_result read() override
-	{
-		read_result ret = reader_->read();
-		if (ret.type_ != aio_result::ok) {
-			return ret;
-		}
-
-
-		buffer_.clear();
-
-		// In the worst case, length will doubled: If reading
-		// only LFs from the file
-		auto * q = buffer_.get(ret.buffer_.size() * 2);
-
-		auto const * p = ret.buffer_.get();
-		auto const * end = ret.buffer_.get() + ret.buffer_.size();
-
-
-		// Convert all stand-alone LFs into CRLF pairs.
-		while (p != end) {
-			auto const& c = *(p++);
-			if (c == '\n') {
-				if (!was_cr_) {
-					*(q++) = '\r';
-				}
-				was_cr_ = false;
-			}
-			else if (c == '\r') {
-				was_cr_ = true;
-			}
-			else {
-				was_cr_ = false;
-			}
-
-			*(q++) = c;
-		}
-
-		buffer_.add(q - buffer_.get());
-		ret.buffer_ = fz::nonowning_buffer(buffer_.get(), buffer_.capacity(), buffer_.size());
-		return ret;
-	}
-
-	std::unique_ptr<reader_base> reader_;
-
-	virtual void operator()(fz::event_base const&) override
-	{
-		if (handler_) {
-			handler_->operator()(read_ready_event(this));
-		}
-	}
-
-private:
-	fz::buffer buffer_;
-	bool was_cr_{};
-};
-}
+#include <libfilezilla/ascii_layer.hpp>
 #endif
 
 CTransferSocket::CTransferSocket(CFileZillaEnginePrivate & engine, CFtpControlSocket & controlSocket, TransferMode transferMode)
@@ -208,34 +40,20 @@ CTransferSocket::~CTransferSocket()
 	writer_.reset();
 }
 
-void CTransferSocket::set_reader(std::unique_ptr<reader_base> && reader, bool ascii)
+void CTransferSocket::set_reader(std::unique_ptr<fz::reader_base> && reader, [[maybe_unused]] bool ascii)
 {
 #if HAVE_ASCII_TRANSFORM
-	if (ascii) {
-		reader_ = std::make_unique<ascii_reader>(engine_, this, std::move(reader));
-	}
-	else
+	use_ascii_ = ascii;
 #endif
-	{
-		(void)ascii;
-		reader_ = std::move(reader);
-		reader_->set_handler(this);
-	}
+	reader_ = std::move(reader);
 }
 
-void CTransferSocket::set_writer(std::unique_ptr<writer_base> && writer, bool ascii)
+void CTransferSocket::set_writer(std::unique_ptr<fz::writer_base> && writer, [[maybe_unused]] bool ascii)
 {
 #if HAVE_ASCII_TRANSFORM
-	if (ascii) {
-		writer_ = std::make_unique<ascii_writer>(engine_, this, std::move(writer));
-	}
-	else
+	use_ascii_ = ascii;
 #endif
-	{
-		(void)ascii;
-		writer_ = std::move(writer);
-		writer_->set_handler(this);
-	}
+	writer_ = std::move(writer);
 }
 
 void CTransferSocket::ResetSocket()
@@ -244,12 +62,15 @@ void CTransferSocket::ResetSocket()
 
 	active_layer_ = nullptr;
 
+#if HAVE_ASCII_TRANSFORM
+	ascii_layer_.reset();
+#endif
 	tls_layer_.reset();
 	proxy_layer_.reset();
 	ratelimit_layer_.reset();
 	activity_logger_layer_.reset();
 	socket_.reset();
-	buffer_.reset();
+	buffer_.release();
 }
 
 std::wstring CTransferSocket::SetupActiveTransfer(std::string const& ip)
@@ -325,7 +146,9 @@ void CTransferSocket::OnSocketEvent(fz::socket_event_source* source, fz::socket_
 			OnSocketError(error);
 		}
 		else {
-			OnReceive();
+			if (OnReceive()) {
+				resend_current_event();
+			}
 		}
 		break;
 	case fz::socket_event_flag::write:
@@ -333,7 +156,9 @@ void CTransferSocket::OnSocketEvent(fz::socket_event_source* source, fz::socket_
 			OnSocketError(error);
 		}
 		else {
-			OnSend();
+			if (OnSend()) {
+				resend_current_event();
+			}
 		}
 		break;
 	default:
@@ -438,73 +263,37 @@ void CTransferSocket::OnConnect()
 		TriggerPostponedEvents();
 	}
 
-	OnSend();
+	if (OnSend()) {
+		send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::write, 0);
+	}
 }
 
-void CTransferSocket::OnReceive()
+bool CTransferSocket::OnReceive()
 {
 	controlSocket_.log(logmsg::debug_debug, L"CTransferSocket::OnReceive(), m_transferMode=%d", m_transferMode);
 
 	if (activity_block_) {
 		controlSocket_.log(logmsg::debug_verbose, L"Postponing receive, m_bActive was false.");
 		m_postponedReceive = true;
-		return;
+		return false;
 	}
 
 	if (m_transferEndReason == TransferEndReason::none) {
 		if (m_transferMode == TransferMode::list) {
-			// See comment in download loop
-			for (int i = 0; i < 100; ++i) {
-				char *pBuffer = new char[4096];
-				int error;
-				int numread = active_layer_->read(pBuffer, 4096, error);
-				if (numread < 0) {
-					delete [] pBuffer;
-					if (error != EAGAIN) {
-						controlSocket_.log(logmsg::error, L"Could not read from transfer socket: %s", fz::socket_error_description(error));
-						TransferEnd(TransferEndReason::transfer_failure);
-					}
-					return;
-				}
-
-				if (numread > 0) {
-					if (!m_pDirectoryListingParser->AddData(pBuffer, numread)) {
-						TransferEnd(TransferEndReason::transfer_failure);
-						return;
-					}
-
-					controlSocket_.SetAlive();
-					if (!m_madeProgress) {
-						m_madeProgress = 2;
-						engine_.transfer_status_.SetMadeProgress();
-					}
-					engine_.transfer_status_.Update(numread);
-				}
-				else {
-					delete [] pBuffer;
-					TransferEnd(TransferEndReason::successful);
-					return;
+			char *pBuffer = new char[4096];
+			int error;
+			int numread = active_layer_->read(pBuffer, 4096, error);
+			if (numread < 0) {
+				delete [] pBuffer;
+				if (error != EAGAIN) {
+					controlSocket_.log(logmsg::error, L"Could not read from transfer socket: %s", fz::socket_error_description(error));
+					TransferEnd(TransferEndReason::transfer_failure);
 				}
 			}
-			send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::read, 0);
-			return;
-		}
-		else if (m_transferMode == TransferMode::download) {
-			int error;
-			int numread;
-
-			// Only do a certain number of iterations in one go to keep the event loop going.
-			// Otherwise this behaves like a livelock on very large files written to a very fast
-			// SSD downloaded from a very fast server.
-			for (int i = 0; i < 100; ++i) {
-				if (!CheckGetNextWriteBuffer()) {
-					return;
-				}
-
-				size_t to_read = buffer_.capacity() - buffer_.size();
-				numread = active_layer_->read(buffer_.get(to_read), static_cast<unsigned int>(to_read), error);
-				if (numread <= 0) {
-					break;
+			else if (numread > 0) {
+				if (!m_pDirectoryListingParser->AddData(pBuffer, numread)) {
+					TransferEnd(TransferEndReason::transfer_failure);
+					return false;
 				}
 
 				controlSocket_.SetAlive();
@@ -512,9 +301,23 @@ void CTransferSocket::OnReceive()
 					m_madeProgress = 2;
 					engine_.transfer_status_.SetMadeProgress();
 				}
-
-				buffer_.add(static_cast<size_t>(numread));
+				engine_.transfer_status_.Update(numread);
+				return true;
 			}
+			else {
+				delete [] pBuffer;
+				TransferEnd(TransferEndReason::successful);
+			}
+			return false;
+		}
+		else if (m_transferMode == TransferMode::download) {
+			if (!CheckGetNextWriteBuffer()) {
+				return false;
+			}
+
+			int error{};
+			size_t to_read = buffer_->capacity() - buffer_->size();
+			int numread = active_layer_->read(buffer_->get(to_read), static_cast<unsigned int>(to_read), error);
 
 			if (numread < 0) {
 				if (error != EAGAIN) {
@@ -522,13 +325,22 @@ void CTransferSocket::OnReceive()
 					TransferEnd(TransferEndReason::transfer_failure);
 				}
 			}
-			else if (!numread) {
-				FinalizeWrite();
-			}
 			else {
-				send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::read, 0);
+				controlSocket_.SetAlive();
+				if (!m_madeProgress) {
+					m_madeProgress = 2;
+					engine_.transfer_status_.SetMadeProgress();
+				}
+
+				if (!numread) {
+					FinalizeWrite();
+				}
+				else {
+					buffer_->add(static_cast<size_t>(numread));
+					return true;
+				}
 			}
-			return;
+			return false;
 		}
 		else if (m_transferMode == TransferMode::resumetest) {
 			for (;;) {
@@ -540,7 +352,7 @@ void CTransferSocket::OnReceive()
 						controlSocket_.log(logmsg::error, L"Could not read from transfer socket: %s", fz::socket_error_description(error));
 						TransferEnd(TransferEndReason::transfer_failure);
 					}
-					return;
+					return false;
 				}
 
 				if (!numread) {
@@ -551,17 +363,17 @@ void CTransferSocket::OnReceive()
 						controlSocket_.log(logmsg::debug_warning, L"Server incorrectly sent %d bytes", resumetest_);
 						TransferEnd(TransferEndReason::failed_resumetest);
 					}
-					return;
+					return false;
 				}
 				resumetest_ += numread;
 
 				if (resumetest_ > 1) {
 					controlSocket_.log(logmsg::debug_warning, L"Server incorrectly sent %d bytes", resumetest_);
 					TransferEnd(TransferEndReason::failed_resumetest);
-					return;
+					return false;
 				}
 			}
-			return;
+			return false;
 		}
 	}
 
@@ -586,53 +398,33 @@ void CTransferSocket::OnReceive()
 			ResetSocket();
 		}
 	}
+	return false;
 }
 
-void CTransferSocket::OnSend()
+bool CTransferSocket::OnSend()
 {
 	if (!active_layer_) {
 		controlSocket_.log(logmsg::debug_verbose, L"OnSend called without backend. Ignoring event.");
-		return;
+		return false;
 	}
 
 	if (activity_block_) {
 		controlSocket_.log(logmsg::debug_verbose, L"Postponing send");
 		m_postponedSend = true;
-		return;
+		return false;
 	}
 
 	if (m_transferMode != TransferMode::upload || m_transferEndReason != TransferEndReason::none) {
-		return;
+		return false;
 	}
 
-	int error;
-	int written;
-
-	// Only do a certain number of iterations in one go to keep the event loop going.
-	// Otherwise this behaves like a livelock on very large files read from a very fast
-	// SSD uploaded to a very fast server.
-	for (int i = 0; i < 100; ++i) {
-		if (!CheckGetNextReadBuffer()) {
-			return;
-		}
-
-		written = active_layer_->write(buffer_.get(), static_cast<int>(buffer_.size()), error);
-		if (written <= 0) {
-			break;
-		}
-
-		controlSocket_.SetAlive();
-		if (m_madeProgress == 1) {
-			controlSocket_.log(logmsg::debug_debug, L"Made progress in CTransferSocket::OnSend()");
-			m_madeProgress = 2;
-			engine_.transfer_status_.SetMadeProgress();
-		}
-		engine_.transfer_status_.Update(written);
-
-		buffer_.consume(written);
+	if (!CheckGetNextReadBuffer()) {
+		return false;
 	}
 
-	if (written < 0) {
+	int error{};
+	int written = active_layer_->write(buffer_->get(), static_cast<int>(buffer_->size()), error);
+	if (written <= 0) {
 		if (error == EAGAIN) {
 			if (!m_madeProgress) {
 				controlSocket_.log(logmsg::debug_debug, L"First EAGAIN in CTransferSocket::OnSend()");
@@ -644,10 +436,22 @@ void CTransferSocket::OnSend()
 			controlSocket_.log(logmsg::error, L"Could not write to transfer socket: %s", fz::socket_error_description(error));
 			TransferEnd(TransferEndReason::transfer_failure);
 		}
+		return false;
 	}
-	else if (written > 0) {
-		send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::write, 0);
+	else {
+		controlSocket_.SetAlive();
+		if (m_madeProgress == 1) {
+			controlSocket_.log(logmsg::debug_debug, L"Made progress in CTransferSocket::OnSend()");
+			m_madeProgress = 2;
+			engine_.transfer_status_.SetMadeProgress();
+		}
+		engine_.transfer_status_.Update(written);
+
+		buffer_->consume(written);
+
+		return true;
 	}
+
 }
 
 void CTransferSocket::OnSocketError(int error)
@@ -662,7 +466,7 @@ void CTransferSocket::OnSocketError(int error)
 	TransferEnd(TransferEndReason::transfer_failure);
 }
 
-bool CTransferSocket::SetupPassiveTransfer(std::wstring const& host, int port)
+bool CTransferSocket::SetupPassiveTransfer(std::wstring const& host, unsigned short port)
 {
 	std::string ip = fz::to_utf8(host);
 
@@ -746,6 +550,13 @@ bool CTransferSocket::InitLayers(bool active)
 			return false;
 		}
 	}
+
+#if HAVE_ASCII_TRANSFORM
+	if (use_ascii_) {
+		ascii_layer_ = std::make_unique<fz::ascii_layer>(event_loop_, nullptr, *active_layer_);
+		active_layer_ = ascii_layer_.get();
+	}
+#endif
 
 	active_layer_->set_event_handler(this);
 
@@ -852,17 +663,22 @@ std::unique_ptr<fz::listen_socket> CTransferSocket::CreateSocketServer()
 
 bool CTransferSocket::CheckGetNextWriteBuffer()
 {
-	if (buffer_.size() >= buffer_.capacity()) {
-		auto res = writer_->get_write_buffer(buffer_);
-		if (res == aio_result::wait) {
-			return false;
+	auto res = fz::aio_result::ok;
+	if (buffer_ && buffer_->size() >= buffer_->capacity()) {
+		res = writer_->add_buffer(std::move(buffer_), *this);
+	}
+	if (res == fz::aio_result::ok && !buffer_) {
+		buffer_ = controlSocket_.buffer_pool_->get_buffer(*this);
+		if (!buffer_) {
+			res = fz::aio_result::wait;
 		}
-		else if (res == aio_result::error) {
-			TransferEnd(TransferEndReason::transfer_failure_critical);
-			return false;
-		}
-
-		buffer_ = res.buffer_;
+	}
+	if (res == fz::aio_result::wait) {
+		return false;
+	}
+	else if (res == fz::aio_result::error) {
+		TransferEnd(TransferEndReason::transfer_failure_critical);
+		return false;
 	}
 
 	return true;
@@ -870,71 +686,72 @@ bool CTransferSocket::CheckGetNextWriteBuffer()
 
 bool CTransferSocket::CheckGetNextReadBuffer()
 {
-	if (buffer_.empty()) {
-		read_result res = reader_->read();
-		if (res == aio_result::wait) {
+	if (buffer_->empty()) {
+		buffer_.release();
+		fz::aio_result res;
+		std::tie(res, buffer_) = reader_->get_buffer(*this);
+
+		if (res == fz::aio_result::wait) {
 			return false;
 		}
-		else if (res == aio_result::error) {
+		else if (res == fz::aio_result::error) {
 			TransferEnd(TransferEndReason::transfer_failure_critical);
 			return false;
 		}
 
-		buffer_ = res.buffer_;
-		if (buffer_.empty()) {
+		if (buffer_->empty()) {
 			int r = active_layer_->shutdown();
-			if (r && r != EAGAIN) {
-				TransferEnd(TransferEndReason::transfer_failure);
+			if (r) {
+				if (r != EAGAIN) {
+					TransferEnd(TransferEndReason::transfer_failure);
+				}
 				return false;
 			}
 			TransferEnd(TransferEndReason::successful);
 			return false;
 		}
 	}
-
 	return true;
 }
 
-void CTransferSocket::OnInput(reader_base*)
+void CTransferSocket::OnBufferAvailability(fz::aio_waitable const* w)
 {
-	if (activity_block_ || m_transferEndReason != TransferEndReason::none) {
-		return;
+	if (w == reader_.get()) {
+		if (OnSend()) {
+			send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::write, 0);
+		}
 	}
-
-	if (m_transferMode == TransferMode::upload) {
-		OnSend();
-	}
-}
-
-void CTransferSocket::OnWrite(writer_base*)
-{
-	if (activity_block_ || m_transferEndReason != TransferEndReason::none) {
-		return;
-	}
-
-	if (m_transferMode == TransferMode::download) {
-		OnReceive();
+	else if (w == writer_.get() || w == &*controlSocket_.buffer_pool_) {
+		if (OnReceive()) {
+			send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::read, 0);
+		}
 	}
 }
 
 void CTransferSocket::FinalizeWrite()
 {
+	controlSocket_.log(logmsg::debug_debug, L"CTransferSocket::FinalizeWrite()");
 	if (m_transferEndReason != TransferEndReason::none) {
 		return;
 	}
 
-	auto res = writer_->finalize(buffer_);
-	if (res == aio_result::wait) {
+	auto res = fz::aio_result::ok;
+	if (!buffer_->empty()) {
+		res = writer_->add_buffer(std::move(buffer_), *this);
+	}
+	if (res == fz::aio_result::ok) {
+		res = writer_->finalize(*this);
+	}
+	if (res == fz::aio_result::wait) {
 		return;
 	}
 
-	if (res == aio_result::ok) {
+	if (res == fz::aio_result::ok) {
 		TransferEnd(TransferEndReason::successful);
 	}
 	else {
 		TransferEnd(TransferEndReason::transfer_failure_critical);
 	}
-
 }
 
 void CTransferSocket::TriggerPostponedEvents()
@@ -946,7 +763,9 @@ void CTransferSocket::TriggerPostponedEvents()
 	if (m_postponedReceive) {
 		controlSocket_.log(logmsg::debug_verbose, L"Executing postponed receive");
 		m_postponedReceive = false;
-		OnReceive();
+		if (OnReceive()) {
+			send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::read, 0);
+		}
 		if (m_transferEndReason != TransferEndReason::none) {
 			return;
 		}
@@ -954,7 +773,9 @@ void CTransferSocket::TriggerPostponedEvents()
 	if (m_postponedSend) {
 		controlSocket_.log(logmsg::debug_verbose, L"Executing postponed send");
 		m_postponedSend = false;
-		OnSend();
+		if (OnSend()) {
+			send_event<fz::socket_event>(active_layer_, fz::socket_event_flag::write, 0);
+		}
 	}
 }
 
@@ -971,10 +792,9 @@ void CTransferSocket::SetSocketBufferSizes(fz::socket_base& socket)
 
 void CTransferSocket::operator()(fz::event_base const& ev)
 {
-	fz::dispatch<fz::socket_event, read_ready_event, write_ready_event, fz::timer_event>(ev, this,
+	fz::dispatch<fz::socket_event, fz::aio_buffer_event, fz::timer_event>(ev, this,
 		&CTransferSocket::OnSocketEvent,
-		&CTransferSocket::OnInput,
-		&CTransferSocket::OnWrite,
+		&CTransferSocket::OnBufferAvailability,
 		&CTransferSocket::OnTimer);
 }
 

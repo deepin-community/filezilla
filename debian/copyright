@@ -4,7 +4,7 @@ Upstream-Contact: Tim Kosse <tim.kosse@filezilla-project.org>
 Source: http://filezilla-project.org/
 
 Files: *
-Copyright: Copyright (C) 2004-2021 Tim Kosse <tim.kosse@filezilla-project.org>
+Copyright: Copyright (C) 2004-2023 Tim Kosse <tim.kosse@filezilla-project.org>
 License: GPL-2+
 
 Files: m4/ax_cxx_compile_stdcxx*.m4
@@ -20,7 +20,7 @@ License: permissive
 
 Files: src/putty/*
 Copyright: Copyright (C) 1997-2016 Simon Tatham
-           Copyright (C) 2004-2021 Tim Kosse <tim.kosse@filezilla-project.org>
+           Copyright (C) 2004-2023 Tim Kosse <tim.kosse@filezilla-project.org>
            Copyright (C) the PuTTY team
 License: MIT
 
@@ -41,14 +41,14 @@ License: MIT
 Files: data/filezilla.appdata.xml
 Copyright: Copyright (C) 2014 Ryan Lerch <rlerch@redhat.com>
            Copyright (C) 2016-2021 Tim Kosse <tim.kosse@filezilla-project.org>
-           Copyright (C) 2020-2021 Phil Wyett (kathenas) <philip.wyett@kathenas.org>
+           Copyright (C) 2020-2022 Phil Wyett (kathenas) <philip.wyett@kathenas.org>
 License: CC0-1.0
 
 Files: debian/*
 Copyright: Copyright (C) 2006-2009 Adam Cécile (Le_Vert) <gandalf@le-vert.net>
            Copyright (C) 2008-2009 Adrien Cunin <adri2000@ubuntu.com>
            Copyright (C) 2016-2017 Gianfranco Costamagna <locutusofborg@debian.org>
-           Copyright (C) 2020-2021 Phil Wyett (kathenas) <philip.wyett@kathenas.org>
+           Copyright (C) 2020-2023 Phil Wyett (kathenas) <philip.wyett@kathenas.org>
 License: GPL-2+
 
 License: MIT

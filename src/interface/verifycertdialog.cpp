@@ -17,8 +17,9 @@
 
 #include <cassert>
 
-CertStore::CertStore()
+CertStore::CertStore(bool kiosk_mode)
 	: xml_cert_store(wxGetApp().GetSettingsFile(L"trustedcerts"))
+	, kiosk_mode_(kiosk_mode)
 {
 }
 
@@ -27,11 +28,6 @@ void CertStore::SavingFileFailed(std::wstring const& file, std::wstring const& e
 	assert(!error.empty());
 	wxString msg = wxString::Format(_("Could not write \"%s\":"), file);
 	wxMessageBoxEx(msg + _T("\n") + error, _("Error writing xml file"), wxICON_ERROR);
-}
-
-bool CertStore::AllowedToSave() const
-{
-	return COptions::Get()->get_int(OPTION_DEFAULT_KIOSKMODE) != 2;
 }
 
 struct CVerifyCertDialog::impl final
@@ -223,8 +219,7 @@ bool CVerifyCertDialog::CreateVerificationDialog(CCertificateNotification const&
 	outer->AddGrowableCol(1);
 	outer->AddGrowableRow(0);
 
-	wxBitmap bmp = CThemeProvider::Get()->CreateBitmap(L"ART_LOCK", wxART_OTHER, CThemeProvider::GetIconSize(iconSizeNormal));
-	auto icon = new wxStaticBitmap(this, nullID, bmp);
+	auto icon = CThemeProvider::Get()->createStaticBitmap(this, L"ART_LOCK", iconSizeNormal);
 	outer->Add(icon);
 
 	auto main = lay.createFlex(1);
@@ -422,7 +417,7 @@ bool CVerifyCertDialog::CreateVerificationDialog(CCertificateNotification const&
 	}
 
 	if (warning_) {
-		icon->SetBitmap(wxArtProvider::GetBitmap(wxART_WARNING));
+		icon->SetBitmap(MakeBmpBundle(wxArtProvider::GetBitmap(wxART_WARNING)));
 		if (impl_->always_) {
 			impl_->always_->Enable(false);
 		}

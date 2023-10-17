@@ -37,7 +37,7 @@ public:
 	void clear();
 
 	// On failure the path is undefined
-	bool ChangePath(std::wstring const& new_path);
+	bool ChangePath(std::wstring const& new_path, std::wstring* file = nullptr);
 
 	// Do not call with separators in the segment
 	void AddSegment(std::wstring const& segment);
@@ -75,6 +75,8 @@ public:
 	bool operator!=(CLocalPath const& op) const;
 
 	bool operator<(CLocalPath const& op) const;
+
+	int compare_case(CLocalPath const& op) const;
 protected:
 	fz::shared_value<std::wstring> m_path;
 };

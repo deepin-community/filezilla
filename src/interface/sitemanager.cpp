@@ -16,21 +16,21 @@
 
 namespace {
 struct background_color {
-	wxColour const color;
+	site_colour const color;
 	char const*const name;
 };
 
 //note: the order needs to be the same as in site_colour (site.h) as that is used as index for this array
 background_color const background_colors[] = {
-	{ wxColour(), fztranslate_mark("None") },
-	{ wxColour(255, 0, 0, 32), fztranslate_mark("Red") },
-	{ wxColour(0, 255, 0, 32), fztranslate_mark("Green") },
-	{ wxColour(0, 0, 255, 32), fztranslate_mark("Blue") },
-	{ wxColour(255, 255, 0, 32), fztranslate_mark("Yellow") },
-	{ wxColour(0, 255, 255, 32), fztranslate_mark("Cyan") },
-	{ wxColour(255, 0, 255, 32), fztranslate_mark("Magenta") },
-	{ wxColour(255, 128, 0, 32), fztranslate_mark("Orange") },
-	{ wxColour(), 0 }
+	{ site_colour::none, fztranslate_mark("None") },
+	{ site_colour::red, fztranslate_mark("Red") },
+	{ site_colour::green, fztranslate_mark("Green") },
+	{ site_colour::blue, fztranslate_mark("Blue") },
+	{ site_colour::yellow, fztranslate_mark("Yellow") },
+	{ site_colour::cyan, fztranslate_mark("Cyan") },
+	{ site_colour::magenta, fztranslate_mark("Magenta") },
+	{ site_colour::orange, fztranslate_mark("Orange") },
+	{ site_colour::end_of_list, nullptr }
 };
 }
 
@@ -254,11 +254,11 @@ std::unique_ptr<Site> CSiteManager::GetSiteById(int id)
 	return pData;
 }
 
-std::pair<std::unique_ptr<Site>, Bookmark> CSiteManager::GetSiteByPath(std::wstring const& sitePath, bool printErrors)
+std::pair<std::unique_ptr<Site>, Bookmark> CSiteManager::GetSiteByPath(COptionsBase & options, std::wstring const& sitePath, bool printErrors)
 {
 	std::wstring error;
 
-	CLocalPath settings_path{COptions::Get()->get_string(OPTION_DEFAULT_SETTINGSDIR)};
+	CLocalPath settings_path{options.get_string(OPTION_DEFAULT_SETTINGSDIR)};
 	app_paths paths{settings_path, GetDefaultsDir()};
 	auto ret = site_manager::GetSiteByPath(paths, sitePath, error);
 	if (!ret.first && printErrors) {
@@ -491,7 +491,7 @@ bool CSiteManager::HasSites()
 	return handler.sites_ > 0;
 }
 
-int CSiteManager::GetColourIndex(wxColour const& c)
+int CSiteManager::GetColourIndex(site_colour const& c)
 {
 	for (int i = 0; background_colors[i].name; ++i) {
 		if (c == background_colors[i].color) {
@@ -510,12 +510,12 @@ wxString CSiteManager::GetColourName(int i)
 	return wxGetTranslation(background_colors[i].name);
 }
 
-void CSiteManager::Rewrite(CLoginManager & loginManager, pugi::xml_node element, bool on_failure_set_to_ask)
+void CSiteManager::Rewrite(CLoginManager & loginManager, COptionsBase& options, pugi::xml_node element, bool on_failure_set_to_ask)
 {
-	bool const forget = COptions::Get()->get_int(OPTION_DEFAULT_KIOSKMODE) != 0;
+	bool const forget = options.get_int(OPTION_DEFAULT_KIOSKMODE) != 0;
 	for (auto child = element.first_child(); child; child = child.next_sibling()) {
 		if (!strcmp(child.name(), "Folder")) {
-			Rewrite(loginManager, child, on_failure_set_to_ask);
+			Rewrite(loginManager, options, child, on_failure_set_to_ask);
 		}
 		else if (!strcmp(child.name(), "Server")) {
 			auto site = ReadServerElement(child);
@@ -525,15 +525,15 @@ void CSiteManager::Rewrite(CLoginManager & loginManager, pugi::xml_node element,
 					unprotect(site->credentials, loginManager.GetDecryptor(site->credentials.encrypted_), on_failure_set_to_ask);
 				}
 				protect(site->credentials);
-				Save(child, *site);
+				site_manager::Save(child, *site, loginManager, options);
 			}
 		}
 	}
 }
 
-void CSiteManager::Rewrite(CLoginManager & loginManager, bool on_failure_set_to_ask)
+void CSiteManager::Rewrite(CLoginManager & loginManager, COptionsBase& options, bool on_failure_set_to_ask)
 {
-	if (COptions::Get()->get_int(OPTION_DEFAULT_KIOSKMODE) == 2) {
+	if (options.get_int(OPTION_DEFAULT_KIOSKMODE) == 2) {
 		return;
 	}
 	CInterProcessMutex mutex(MUTEX_SITEMANAGER);
@@ -550,59 +550,9 @@ void CSiteManager::Rewrite(CLoginManager & loginManager, bool on_failure_set_to_
 		return;
 	}
 
-	Rewrite(loginManager, element, on_failure_set_to_ask);
+	Rewrite(loginManager, options, element, on_failure_set_to_ask);
 
 	SaveWithErrorDialog(file);
-}
-
-void CSiteManager::Save(pugi::xml_node element, Site const& site)
-{
-	SetServer(element, site);
-
-	// Save comments
-	if (!site.comments_.empty()) {
-		AddTextElement(element, "Comments", site.comments_);
-	}
-
-	// Save colour
-	int col = CSiteManager::GetColourIndex(site_colour_to_wx(site.m_colour));
-	if (col) {
-		AddTextElement(element, "Colour", col);
-	}
-
-	// Save local dir
-	if (!site.m_default_bookmark.m_localDir.empty()) {
-		AddTextElement(element, "LocalDir", site.m_default_bookmark.m_localDir);
-	}
-
-	// Save remote dir
-	auto const sp = site.m_default_bookmark.m_remoteDir.GetSafePath();
-	if (!sp.empty()) {
-		AddTextElement(element, "RemoteDir", sp);
-	}
-
-	AddTextElementUtf8(element, "SyncBrowsing", site.m_default_bookmark.m_sync ? "1" : "0");
-	AddTextElementUtf8(element, "DirectoryComparison", site.m_default_bookmark.m_comparison ? "1" : "0");
-
-	for (auto const& bookmark : site.m_bookmarks) {
-		auto node = element.append_child("Bookmark");
-
-		AddTextElement(node, "Name", bookmark.m_name);
-
-		// Save local dir
-		if (!bookmark.m_localDir.empty()) {
-			AddTextElement(node, "LocalDir", bookmark.m_localDir);
-		}
-
-		// Save remote dir
-		auto const sp = bookmark.m_remoteDir.GetSafePath();
-		if (!sp.empty()) {
-			AddTextElement(node, "RemoteDir", sp);
-		}
-
-		AddTextElementUtf8(node, "SyncBrowsing", bookmark.m_sync ? "1" : "0");
-		AddTextElementUtf8(node, "DirectoryComparison", bookmark.m_comparison ? "1" : "0");
-	}
 }
 
 namespace {
@@ -706,7 +656,7 @@ bool CSiteManager::ImportSites(pugi::xml_node sitesToImport, pugi::xml_node exis
 		protect(site->credentials);
 
 		auto xsite = existingSites.append_child("Server");
-		Save(xsite, *site);
+		site_manager::Save(xsite, *site, loginManager, *COptions::Get());
 	}
 
 	return true;

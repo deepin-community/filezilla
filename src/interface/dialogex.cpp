@@ -58,7 +58,7 @@ bool wxDialogEx::ProcessEvent(wxEvent& event)
 bool wxDialogEx::Create(wxWindow* parent, int id, wxString const& title, wxPoint const& pos, wxSize const& size, long style)
 {
 	bool ret = wxDialog::Create(parent, id, title, pos, size, style);
-#ifdef __WXMAC__
+#if defined(__WXMAC__) && !wxCHECK_VERSION(3, 2, 1)
 	if (ret) {
 		FixPasswordPaste(acceleratorTable_);
 	}
@@ -86,7 +86,7 @@ bool wxDialogEx::Load(wxWindow* pParent, wxString const& name, std::wstring cons
 		return false;
 	}
 
-#ifdef __WCMAC__
+#if defined(__WXMAC__) && !wxCHECK_VERSION(3, 2, 1)
 	FixPasswordPaste(acceleratorTable_);
 #endif
 
@@ -174,13 +174,7 @@ bool wxDialogEx::ReplaceControl(wxWindow* old, wxWindow* wnd)
 
 bool wxDialogEx::CanShowPopupDialog(wxTopLevelWindow * parent)
 {
-	if (IsShowingMessageBox()) {
-		// There already a message box showing
-		return false;
-	}
-
-	if (!shown_dialogs_.empty() && shown_dialogs_.back() != parent) {
-		// There is an open dialog which isn't the expected parent
+	if (!IsActiveTLW(parent)) {
 		return false;
 	}
 
@@ -203,6 +197,21 @@ bool wxDialogEx::CanShowPopupDialog(wxTopLevelWindow * parent)
 		return false;
 	}
 #endif
+
+	return true;
+}
+
+bool wxDialogEx::IsActiveTLW(wxTopLevelWindow * parent)
+{
+	if (IsShowingMessageBox()) {
+		// There already a message box showing
+		return false;
+	}
+
+	if (parent && !shown_dialogs_.empty() && shown_dialogs_.back() != parent) {
+		// There is an open dialog which isn't the expected parent
+		return false;
+	}
 
 	return true;
 }
@@ -249,6 +258,11 @@ DialogLayout::DialogLayout(wxTopLevelWindow * parent)
 	gap = dlgUnits(3);
 	border = dlgUnits(3);
 	indent = dlgUnits(10);
+#if defined(__WXMAC__) && wxCHECK_VERSION(3, 2, 1)
+	defTextCtrlSize = parent ? parent->ConvertDialogToPixels(wxSize(50, -1)) : wxDefaultSize;
+#else
+	defTextCtrlSize = wxDefaultSize;
+#endif
 }
 
 int DialogLayout::dlgUnits(int num) const
@@ -368,7 +382,7 @@ std::wstring LabelEscape(std::wstring_view const& label, size_t maxlen)
 	return ret;
 }
 
-#ifdef __WXMAC__
+#if defined(__WXMAC__) && !wxCHECK_VERSION(3, 2, 1)
 void FixPasswordPaste(std::vector<wxAcceleratorEntry> & entries)
 {
 	entries.emplace_back(wxACCEL_CMD, 'V', pasteId);
