@@ -10,6 +10,95 @@ Legend:
     *nix: Unix (e.g BSD) and Unix-like systems (e.g. Linux)
     macOS/OS X: Apple macOS
 
+3.65.0 (2023-07-10)
+
++ Comparative search can now also be used if sorted by path
+- Fixed an issue in comparative search in directories with uppercase letters
+
+3.65.0-rc1 (2023-06-29)
+
+- Fixed potential crashes
+- Updated to libfilezilla 0.44.0
+
+3.64.0 (2023-04-26)
+
+- Fixed refresh of directory trees when filters changing
+- Updated to libfilezilla 0.42.2
+
+3.64.0-rc1 (2023-04-13)
+
+- MSW: Additional icon sizing fixes on high DPI scale factors
+- Updated to libfilezilla 0.42.0
+- Switched to .tar.xz for source tarballs
+
+3.63.2.1 (2023-02-23)
+
+- macOS: Several rendering fixes in dark mode
+- macOS: Disable automatic quote/dash substitution in text input fields
+- MSW: Fixed an issue with Drag&Drop to Explorer on systems that use shortened 8.3 pathnames in environment variables
+- MSW: If FileZilla was installed for current user only, updating with the installer now skips the UAC prompt
+- Updated to libfilezilla 0.41.1 to fix a rare crash
+- Official binaries are now built againt GnuTLS 3.8.0
+
+3.63.1 (2023-01-26)
+
+- MSW: Fixed icon sizing issue on high DPI scale factors
+
+3.63.0 (2023-01-24)
+
+- All official FileZilla binares now link against wxWidgets 3.2.1
+- Fixed a potential crash when closing FileZilla
+- macOS: Fixed tree control scroll position not following the foucsed item
+- macOS: Fixed an issue preventing translations into some languages to be loaded
+
+3.62.2 (2022-11-22)
+
+- Fixed an issue with some dialogs not showing up
+
+3.62.1 (2022-11-17)
+
+- Fixed a crash if main menu events arrive while a dialog is already open
+- macOS: Fixed an issue with keyboard shortcuts
+- macOS: Fix selected item count in file list status bars
+- macOS: Fixed graphical corruption in some controls
+
+3.62.0 (2022-10-27)
+
+- Fixed sizing issues in about and welcome dialogs
+
+3.62.0-beta1 (2022-10-11)
+
+- macOS binaries are now built against wxWidgets 3.2.1
+- Updated to libfilezilla 0.39.2
+
+3.61.0 (2022-09-19)
+
+- Updated to libfilezilla 0.39.1
+
+3.61.0-beta1 (2022-09-07)
+
++ Use improved asynchronous file readers/writers from libfilezilla
+- Fix export of root items in the Site Manager
+- Handle rare cases of non-existing download directory in the updater
+
+3.60.2 (2022-07-22)
+
+- Updated to libfilezilla 0.38.1 to address an issue with child process termination resulting in freezes
+
+3.60.1 (2022-06-01)
+
+- Fixed a regression drag-moving local files
+
+3.60.0 (2022-05-27)
+
+- SFTP: Fixed error handling if reading from child process fails
+- Fixed transfers following recursive operations not starting if the connection limit has been set to 1 in the Site Manager
+
+3.60.0-rc1 (2022-05-19)
+
++ macOS: Remote files can now be dragged into Finder
+- Fixed file change detection when editing files
+
 3.59.0 (2022-04-08)
 
 - Windows binaries: Updated zlib, used purely to cache re-scaled versions of icons shipped with FileZilla, to 1.2.12

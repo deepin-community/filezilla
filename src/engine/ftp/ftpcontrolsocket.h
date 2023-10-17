@@ -5,8 +5,6 @@
 #include "../controlsocket.h"
 #include "../rtt.h"
 
-#include <regex>
-
 namespace PrivCommand {
 auto const cwd = Command::private1;
 auto const rawtransfer = Command::private2;
@@ -63,7 +61,7 @@ protected:
 	virtual void RawCommand(std::wstring const& command) override;
 	virtual void Delete(CServerPath const& path, std::vector<std::wstring>&& files) override;
 	virtual void RemoveDir(CServerPath const& path, std::wstring const& subDir) override;
-	virtual void Mkdir(CServerPath const& path) override;
+	virtual void Mkdir(CServerPath const& path, transfer_flags const& flags = {}) override;
 	virtual void Rename(CRenameCommand const& command) override;
 	virtual void Chmod(CChmodCommand const& command) override;
 	void Transfer(std::wstring const& cmd, CFtpTransferOpData* oldData);
@@ -128,8 +126,6 @@ protected:
 
 	void OnExternalIPAddress();
 	void OnTimer(fz::timer_id id);
-
-	std::unique_ptr<std::wregex> m_pasvReplyRegex; // Have it as class member to avoid recompiling the regex on each transfer or listing
 
 	friend class CProtocolOpData<CFtpControlSocket>;
 	friend class CFtpChangeDirOpData;

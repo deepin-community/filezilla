@@ -86,10 +86,10 @@ public:
 			pDragDropManager->pDropTarget = m_pRemoteListView;
 		}
 
-		auto const format = m_pDataObject->GetReceivedFormat();
-		if (format == m_pFileDataObject->GetFormat() || format == m_pLocalDataObject->GetFormat()) {
+		auto const format = GetReceivedFormat();
+		if (format == m_pFileDataObject->GetFormat() || format == LocalDataObjectFormat()) {
 			std::wstring subdir;
-			int flags = 0;
+			int flags{};
 			int hit = m_pRemoteListView->HitTest(wxPoint(x, y), flags, 0);
 			if (hit != -1 && (flags & wxLIST_HITTEST_ONITEM)) {
 				int index = m_pRemoteListView->GetItemIndex(hit);
@@ -102,31 +102,31 @@ public:
 					}
 				}
 			}
-
 			if (format == m_pFileDataObject->GetFormat()) {
 				m_pRemoteListView->m_state.UploadDroppedFiles(m_pFileDataObject, subdir, false);
 			}
 			else {
-				m_pRemoteListView->m_state.UploadDroppedFiles(m_pLocalDataObject, subdir, false);
+				m_pRemoteListView->m_state.UploadDroppedFiles(GetLocalDataObject(), subdir, false);
 			}
 			return wxDragCopy;
 		}
 
 		// At this point it's the remote data object.
+		auto * obj = GetRemoteDataObject();
 
-		if (m_pRemoteDataObject->GetProcessId() != (int)wxGetProcessId()) {
+		if (obj->GetProcessId() != (int)wxGetProcessId()) {
 			wxMessageBoxEx(_("Drag&drop between different instances of FileZilla has not been implemented yet."));
 			return wxDragNone;
 		}
 
-		if (m_pRemoteDataObject->GetSite().server != m_pRemoteListView->m_state.GetSite().server) {
+		if (obj->GetSite().server != m_pRemoteListView->m_state.GetSite().server) {
 			wxMessageBoxEx(_("Drag&drop between different servers has not been implemented yet."));
 			return wxDragNone;
 		}
 
 		// Find drop directory (if it exists)
 		std::wstring subdir;
-		int flags = 0;
+		int flags{};
 		int hit = m_pRemoteListView->HitTest(wxPoint(x, y), flags, 0);
 		if (hit != -1 && (flags & wxLIST_HITTEST_ONITEM)) {
 			int index = m_pRemoteListView->GetItemIndex(hit);
@@ -152,15 +152,15 @@ public:
 		}
 
 		// Make sure target path is valid
-		if (target == m_pRemoteDataObject->GetServerPath()) {
+		if (target == obj->GetServerPath()) {
 			wxMessageBoxEx(_("Source and target of the drop operation are identical"));
 			return wxDragNone;
 		}
 
-		const std::vector<CRemoteDataObject::t_fileInfo>& files = m_pRemoteDataObject->GetFiles();
+		const std::vector<CRemoteDataObject::t_fileInfo>& files = obj->GetFiles();
 		for (auto const& info : files) {
 			if (info.dir) {
-				CServerPath dir = m_pRemoteDataObject->GetServerPath();
+				CServerPath dir = obj->GetServerPath();
 				dir.AddSegment(info.name);
 				if (dir == target) {
 					return wxDragNone;
@@ -174,7 +174,7 @@ public:
 
 		for (auto const& info : files) {
 			m_pRemoteListView->m_state.m_pCommandQueue->ProcessCommand(
-				new CRenameCommand(m_pRemoteDataObject->GetServerPath(), info.name, target, info.name)
+				new CRenameCommand(obj->GetServerPath(), info.name, target, info.name)
 				);
 		}
 
@@ -186,7 +186,7 @@ public:
 
 	virtual bool OnDrop(wxCoord x, wxCoord y)
 	{
-		CScrollableDropTarget<wxListCtrlEx>::OnDrop(x, y);
+		CScrollableDropTarget::OnDrop(x, y);
 		ClearDropHighlight();
 
 		if (!m_pRemoteListView->m_pDirectoryListing) {
@@ -204,7 +204,7 @@ public:
 
 	int DoDisplayDropHighlight(wxPoint point)
 	{
-		int flags;
+		int flags{};
 		int hit = m_pRemoteListView->HitTest(point, flags, 0);
 		if (!(flags & wxLIST_HITTEST_ONITEM)) {
 			hit = -1;
@@ -245,7 +245,7 @@ public:
 
 	virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxListCtrlEx>::OnDragOver(x, y, def);
+		def = CScrollableDropTarget::OnDragOver(x, y, def);
 
 		if (def == wxDragError ||
 			def == wxDragNone ||
@@ -281,13 +281,13 @@ public:
 
 	virtual void OnLeave()
 	{
-		CScrollableDropTarget<wxListCtrlEx>::OnLeave();
+		CScrollableDropTarget::OnLeave();
 		ClearDropHighlight();
 	}
 
 	virtual wxDragResult OnEnter(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxListCtrlEx>::OnEnter(x, y, def);
+		def = CScrollableDropTarget::OnEnter(x, y, def);
 		return OnDragOver(x, y, def);
 	}
 
@@ -369,21 +369,18 @@ CRemoteListView::~CRemoteListView()
 int CRemoteListView::OnGetItemImage(long item) const
 {
 	CRemoteListView *pThis = const_cast<CRemoteListView *>(this);
+
 	int index = GetItemIndex(item);
-	if (index < 0) {
+	if (index < 0 || static_cast<size_t>(index) >= pThis->m_fileData.size()) {
 		return -1;
 	}
 
-	if (index >= pThis->m_fileData.size()) {
-		return -1;
-	}
 	int &icon = pThis->m_fileData[index].icon;
-
 	if (icon != -2) {
 		return icon;
 	}
 
-	if (!m_pDirectoryListing || index >= m_pDirectoryListing->size()) {
+	if (!m_pDirectoryListing || static_cast<size_t>(index) >= m_pDirectoryListing->size()) {
 		return -1;
 	}
 
@@ -973,7 +970,7 @@ void CRemoteListView::OnItemActivated(wxListEvent &event)
 				return;
 			}
 
-			std::wstring localFile = CQueueView::ReplaceInvalidCharacters(name);
+			std::wstring localFile = CQueueView::ReplaceInvalidCharacters(options_, name);
 			if (m_pDirectoryListing->path.GetType() == VMS && options_.get_int(OPTION_STRIP_VMS_REVISION)) {
 				localFile = StripVMSRevision(localFile);
 			}
@@ -1050,10 +1047,10 @@ void CRemoteListView::OnContextMenu(wxContextMenuEvent& event)
 
 	wxMenu menu;
 	auto item = new wxMenuItem(&menu, XRCID("ID_DOWNLOAD"), _("&Download"), _("Download selected files and directories"));
-	item->SetBitmap(wxArtProvider::GetBitmap(_T("ART_DOWNLOAD"), wxART_MENU));
+	item->SetBitmap(MakeBmpBundle(wxArtProvider::GetBitmap(_T("ART_DOWNLOAD"), wxART_MENU)));
 	menu.Append(item);
 	item = new wxMenuItem(&menu, XRCID("ID_ADDTOQUEUE"), _("&Add files to queue"), _("Add selected files and folders to the transfer queue"));
-	item->SetBitmap(wxArtProvider::GetBitmap(_T("ART_DOWNLOADADD"), wxART_MENU));
+	item->SetBitmap(MakeBmpBundle(wxArtProvider::GetBitmap(_T("ART_DOWNLOADADD"), wxART_MENU)));
 	menu.Append(item);
 	menu.Append(XRCID("ID_ENTER"), _("E&nter directory"), _("Enter selected directory"));
 	menu.Append(XRCID("ID_EDIT"), _("&View/Edit"));
@@ -1268,14 +1265,14 @@ void CRemoteListView::TransferSelectedFiles(const CLocalPath& local_parent, bool
 				continue;
 			}
 			CLocalPath local_path(local_parent);
-			local_path.AddSegment(CQueueView::ReplaceInvalidCharacters(name));
+			local_path.AddSegment(CQueueView::ReplaceInvalidCharacters(options_, name));
 			CServerPath remotePath = m_pDirectoryListing->path;
 			if (remotePath.AddSegment(name)) {
 				root.add_dir_to_visit(m_pDirectoryListing->path, name, local_path, entry.is_link());
 			}
 		}
 		else {
-			std::wstring localFile = CQueueView::ReplaceInvalidCharacters(name);
+			std::wstring localFile = CQueueView::ReplaceInvalidCharacters(options_, name);
 			if (m_pDirectoryListing->path.GetType() == VMS && options_.get_int(OPTION_STRIP_VMS_REVISION)) {
 				localFile = StripVMSRevision(localFile);
 			}
@@ -2111,10 +2108,10 @@ void CRemoteListView::OnStateChange(t_statechange_notifications notification, st
 	}
 	else if (notification == STATECHANGE_SERVER) {
 		if (m_windowTinter) {
-			m_windowTinter->SetBackgroundTint(site_colour_to_wx(m_state.GetSite().m_colour));
+			m_windowTinter->SetBackgroundTint(m_state.GetSite().m_colour);
 		}
 		if (m_pInfoText) {
-			m_pInfoText->SetBackgroundTint(site_colour_to_wx(m_state.GetSite().m_colour));
+			m_pInfoText->SetBackgroundTint(m_state.GetSite().m_colour);
 		}
 	}
 	else {
@@ -2216,6 +2213,7 @@ void CRemoteListView::OnBeginDrag(wxListEvent&)
 	pDragDropManager->pDragSource = this;
 	pDragDropManager->site = site;
 	pDragDropManager->remoteParent = m_pDirectoryListing->path;
+	pDragDropManager->dragDataObject = pRemoteDataObject;
 
 	// Add files to remote data object
 	item = -1;
@@ -2254,10 +2252,9 @@ void CRemoteListView::OnBeginDrag(wxListEvent&)
 
 	CLabelEditBlocker b(*this);
 
-	wxDropSource source(this);
+	DropSource source(this);
 	source.SetData(object);
-
-	int res = source.DoDragDrop();
+	int res = source.DoFileDragDrop();
 
 	pDragDropManager->Release();
 
@@ -2265,9 +2262,13 @@ void CRemoteListView::OnBeginDrag(wxListEvent&)
 		return;
 	}
 
+#if FZ3_USESHELLEXT || defined(__WXMAC__)
 #if FZ3_USESHELLEXT
 	if (ext) {
 		if (!pRemoteDataObject->DidSendData()) {
+#else
+	if (!source.m_OutDir.IsEmpty()) {
+#endif
 			Site newSite = m_state.GetSite();
 			if (!m_state.IsRemoteIdle() ||
 				!newSite || newSite.server != pRemoteDataObject->GetSite().server ||
@@ -2304,16 +2305,26 @@ void CRemoteListView::OnBeginDrag(wxListEvent&)
 					return;
 				}
 			}
-
+#if FZ3_USESHELLEXT
 			CLocalPath target(ext->GetTarget().ToStdWstring());
+#else
+			// wxMessageBoxEx(source.m_OutDir);
+			CLocalPath target(source.m_OutDir.ToStdWstring());
+#endif
 			if (target.empty()) {
+#if FZ3_USESHELLEXT
 				ext.reset(); // Release extension before the modal message box
 				wxMessageBoxEx(_("Could not determine the target of the Drag&Drop operation.\nEither the shell extension is not installed properly or you didn't drop the files into an Explorer window."));
+#else
+				wxMessageBoxEx(_("Could not determine the target of the Drag&Drop operation."));
+#endif
 				return;
 			}
 
 			TransferSelectedFiles(target, false);
+#if FZ3_USESHELLEXT
 		}
+#endif
 	}
 #endif
 }
@@ -2609,6 +2620,9 @@ void CRemoteListView::OnExitComparisonMode()
 
 bool CRemoteListView::ItemIsDir(int index) const
 {
+	if (!m_pDirectoryListing || index < 0 || index >= m_pDirectoryListing->size()) {
+		return false;
+	}
 	return (*m_pDirectoryListing)[index].is_dir();
 }
 
@@ -2620,7 +2634,7 @@ int64_t CRemoteListView::ItemGetSize(int index) const
 void CRemoteListView::LinkIsNotDir(CServerPath const& path, std::wstring const& link)
 {
 	if (m_pLinkResolveState && m_pLinkResolveState->remote_path == path && m_pLinkResolveState->link == link) {
-		std::wstring localFile = CQueueView::ReplaceInvalidCharacters(link);
+		std::wstring localFile = CQueueView::ReplaceInvalidCharacters(options_, link);
 		if (m_pDirectoryListing->path.GetType() == VMS && options_.get_int(OPTION_STRIP_VMS_REVISION)) {
 			localFile = StripVMSRevision(localFile);
 		}
@@ -2799,6 +2813,6 @@ void CRemoteListView::OnMenuNewfile(wxCommandEvent&)
 		return;
 	}
 
-	CFileTransferCommand *cmd = new CFileTransferCommand(memory_reader_factory(L"Empty file", std::string_view()), m_pDirectoryListing->path, newFileName, transfer_flags());
+	CFileTransferCommand *cmd = new CFileTransferCommand(fz::view_reader_factory(L"Empty file", std::string_view()), m_pDirectoryListing->path, newFileName, transfer_flags());
 	m_state.m_pCommandQueue->ProcessCommand(cmd);
 }

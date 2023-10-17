@@ -21,11 +21,25 @@ struct wxAuiTabArtExData
 	std::map<wxString, int> maxSizes;
 };
 
-#if !defined(wxHAS_NATIVE_TABART) && defined(__WXMSW__)
+
+#if defined(__WXMSW__) || defined (__WXMAC__)
+#define USE_PREPARED_ICONS 1
+#endif
+
+#if USE_PREPARED_ICONS
 namespace {
-void PrepareTabIcon(wxBitmap & active, wxBitmap & disabled, wxString const& art, wxSize const& size, wxSize const& canvasSize, wxSize const& offset = wxSize(), std::function<void(wxImage&)> const& f = nullptr, unsigned char brightness = 128)
+void PrepareTabIcon(wxBitmap & active, wxBitmap & disabled, wxString const& art, wxSize size, wxSize canvasSize, wxSize offset = wxSize(), std::function<void(wxImage&)> const& f = nullptr, unsigned char brightness = 128)
 {
-	wxBitmap loaded = CThemeProvider::Get()->CreateBitmap(art, wxART_OTHER, size);
+#ifdef __WXMAC__
+	double const scale = wxGetApp().GetTopWindow()->GetContentScaleFactor();
+#else
+	double const scale = 1.0;
+#endif
+	size *= scale;
+	canvasSize *= scale;
+	offset *= scale;
+
+	wxBitmap loaded = CThemeProvider::Get()->CreateBitmap(art, wxART_TOOLBAR, size);
 	if (!loaded.IsOk()) {
 		return;
 	}
@@ -34,19 +48,38 @@ void PrepareTabIcon(wxBitmap & active, wxBitmap & disabled, wxString const& art,
 	img.SetMaskColour(0, 0, 0);
 	img.InitAlpha();
 
-	int x = (canvasSize.x - loaded.GetSize().x) / 2 + offset.x ;
+	int x = (canvasSize.x - loaded.GetSize().x) / 2 + offset.x;
 	int y = (canvasSize.x - loaded.GetSize().y) / 2 + offset.y;
 	img.Paste(loaded.ConvertToImage(), x, y);
 	if (f) {
 		f(img);
 	}
+#ifdef __WXMAC__
+	active = wxBitmap(img, -1, scale);
+#else
 	active = wxBitmap(img);
+#endif
 	disabled = active.ConvertToDisabled(brightness);
 }
+
+#if wxCHECK_VERSION(3, 2, 1)
+void PrepareTabIcon(wxBitmapBundle & active, wxBitmapBundle & disabled, wxString const& art, wxSize const& size, wxSize const& canvasSize, wxSize const& offset = wxSize(), std::function<void(wxImage&)> const& f = nullptr, unsigned char brightness = 128)
+{
+	wxBitmap a, d;
+	PrepareTabIcon(a, d, art, size, canvasSize, offset, f, brightness);
+	active = MakeBmpBundle(a);
+	disabled = MakeBmpBundle(d);
+}
+#endif
 }
 #endif
 
-class wxAuiTabArtEx : public wxAuiDefaultTabArt
+#ifdef __WXGTK__
+typedef wxAuiDefaultTabArt TabArtBase;
+#else
+typedef wxAuiGenericTabArt TabArtBase;
+#endif
+class wxAuiTabArtEx : public TabArtBase
 {
 public:
 	wxAuiTabArtEx(wxAuiNotebookEx* pNotebook, std::shared_ptr<wxAuiTabArtExData> const& data)
@@ -54,28 +87,12 @@ public:
 		, m_data(data)
 	{
 
-#if !defined(wxHAS_NATIVE_TABART) && defined(__WXMSW__)
-		wxSize canvas(CThemeProvider::Get()->GetIconSize(iconSizeSmall));
-		wxSize size = canvas;
-		size.Scale(0.75, 0.75);
-
-		wxSize closeOffset(-3, 0);
-		PrepareTabIcon(m_activeCloseBmp, m_disabledCloseBmp, L"ART_CLOSE", size, canvas, closeOffset);
-		PrepareTabIcon(m_activeCloseBmp, m_disabledCloseBmp, L"ART_CLOSE", size, canvas, closeOffset);
-
-		wxSize offset(0, (canvas.y - size.y) / -4);
-		PrepareTabIcon(m_activeWindowListBmp, m_disabledWindowListBmp, L"ART_DROPDOWN", size, canvas, offset);
-
-		// Up arrow mirrored along top-left to bottom-right diagonal gets a left button with correct drop shadow
-		auto mirror = [](wxImage& img) {
-			img = img = img.Mirror().Rotate90(false);
-		};
-		PrepareTabIcon(m_activeLeftBmp, m_disabledLeftBmp, L"ART_SORT_UP_DARK", size, canvas, offset, mirror, 192);
-		PrepareTabIcon(m_activeRightBmp, m_disabledRightBmp, L"ART_SORT_DOWN_DARK", size, canvas, offset, mirror, 192);
+#if USE_PREPARED_ICONS
+		PrepareIcons();
 #endif
 	}
 
-	virtual wxAuiTabArt* Clone()
+	virtual wxAuiTabArt* Clone() override
 	{
 		wxAuiTabArtEx *art = new wxAuiTabArtEx(m_pNotebook, m_data);
 		art->SetNormalFont(m_normalFont);
@@ -84,9 +101,13 @@ public:
 		return art;
 	}
 
-	virtual wxSize GetTabSize(wxDC& dc, wxWindow* wnd, const wxString& caption, const wxBitmap& bitmap, bool active, int close_button_state, int* x_extent)
+#if wxCHECK_VERSION(3, 2, 1)
+	virtual wxSize GetTabSize(wxDC& dc, wxWindow* wnd, const wxString& caption, const wxBitmapBundle& bitmap, bool active, int close_button_state, int* x_extent) override
+#else
+	virtual wxSize GetTabSize(wxDC& dc, wxWindow* wnd, const wxString& caption, const wxBitmap& bitmap, bool active, int close_button_state, int* x_extent) override
+#endif
 	{
-		wxSize size = wxAuiDefaultTabArt::GetTabSize(dc, wnd, caption, bitmap, active, close_button_state, x_extent);
+		wxSize size = TabArtBase::GetTabSize(dc, wnd, caption, bitmap, active, close_button_state, x_extent);
 
 		wxString text = caption;
 		int pos;
@@ -110,7 +131,7 @@ public:
 		return size;
 	}
 
-	virtual void DrawTab(wxDC &dc, wxWindow *wnd, const wxAuiNotebookPage &page, const wxRect &rect, int close_button_state, wxRect *out_tab_rect, wxRect *out_button_rect, int *x_extent)
+	virtual void DrawTab(wxDC &dc, wxWindow *wnd, const wxAuiNotebookPage &page, const wxRect &rect, int close_button_state, wxRect *out_tab_rect, wxRect *out_button_rect, int *x_extent) override
 	{
 		wxColour const tint = m_pNotebook->GetTabColour(page.window);
 
@@ -134,7 +155,7 @@ public:
 			m_baseColour = base;
 			m_activeColour = active;
 
-			wxAuiDefaultTabArt::DrawTab(dc, wnd, page, rect, close_button_state, out_tab_rect, out_button_rect, x_extent);
+			TabArtBase::DrawTab(dc, wnd, page, rect, close_button_state, out_tab_rect, out_button_rect, x_extent);
 
 			m_baseColour = baseOrig;
 			m_activeColour = baseOrig;
@@ -144,7 +165,7 @@ public:
 				out_tab_rect = &tab_rect;
 			}
 
-			wxAuiDefaultTabArt::DrawTab(dc, wnd, page, rect, close_button_state, out_tab_rect, out_button_rect, x_extent);
+			TabArtBase::DrawTab(dc, wnd, page, rect, close_button_state, out_tab_rect, out_button_rect, x_extent);
 
 			wxMemoryDC *mdc = dynamic_cast<wxMemoryDC*>(&dc);
 			if (mdc) {
@@ -158,11 +179,42 @@ public:
 #endif
 		}
 		else {
-			wxAuiDefaultTabArt::DrawTab(dc, wnd, page, rect, close_button_state, out_tab_rect, out_button_rect, x_extent);
+			TabArtBase::DrawTab(dc, wnd, page, rect, close_button_state, out_tab_rect, out_button_rect, x_extent);
 		}
 	}
 
 protected:
+
+#if USE_PREPARED_ICONS
+#if wxCHECK_VERSION(3, 2, 1)
+	virtual void UpdateColoursFromSystem() override
+	{
+		TabArtBase::UpdateColoursFromSystem();
+		PrepareIcons();
+	}
+#endif
+
+	void PrepareIcons()
+	{
+		wxSize canvas(CThemeProvider::Get()->GetIconSize(iconSizeSmall));
+		wxSize size = canvas;
+		size.Scale(0.75, 0.75);
+
+		wxSize closeOffset(-3, 0);
+		PrepareTabIcon(m_activeCloseBmp, m_disabledCloseBmp, L"ART_CLOSE", size, canvas, closeOffset);
+
+		wxSize offset(0, (canvas.y - size.y) / -4);
+		PrepareTabIcon(m_activeWindowListBmp, m_disabledWindowListBmp, L"ART_DROPDOWN", size, canvas, offset);
+
+		// Up arrow mirrored along top-left to bottom-right diagonal gets a left button with correct drop shadow
+		auto mirror = [](wxImage& img) {
+			img = img = img.Mirror().Rotate90(false);
+		};
+		PrepareTabIcon(m_activeLeftBmp, m_disabledLeftBmp, L"ART_SORT_UP_DARK", size, canvas, offset, mirror, 192);
+		PrepareTabIcon(m_activeRightBmp, m_disabledRightBmp, L"ART_SORT_DOWN_DARK", size, canvas, offset, mirror, 192);
+	}
+#endif
+
 	wxAuiNotebookEx* m_pNotebook;
 
 	std::shared_ptr<wxAuiTabArtExData> m_data;

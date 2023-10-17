@@ -33,12 +33,13 @@
 	#endif
 #endif
 
-CControlSocket::CControlSocket(CFileZillaEnginePrivate & engine)
+CControlSocket::CControlSocket(CFileZillaEnginePrivate & engine, bool use_shm)
 	: event_handler(engine.event_loop_)
 	, engine_(engine)
 	, opLockManager_(engine.opLockManager_)
 	, logger_(engine.GetLogger())
 {
+	InitBufferPool(use_shm);
 }
 
 CControlSocket::~CControlSocket()
@@ -374,11 +375,11 @@ int CControlSocket::CheckOverwriteFile()
 	data.localFileTime_ = data.download() ? data.writer_factory_.mtime() : data.reader_factory_.mtime();
 
 	if (data.download()) {
-		if (data.localFileSize_ == aio_base::nosize && data.localFileTime_.empty()) {
+		if (data.localFileSize_ == fz::aio_base::nosize && data.localFileTime_.empty()) {
 			return FZ_REPLY_OK;
 		}
 	}
-	
+
 	CDirentry entry;
 	bool dirDidExist;
 	bool matchedCase;
@@ -408,7 +409,7 @@ int CControlSocket::CheckOverwriteFile()
 		}
 	}
 
-	
+
 
 	auto notification = std::make_unique<CFileExistsNotification>();
 
@@ -457,7 +458,11 @@ void SleepOpData::operator()(fz::event_base const&)
 CFileTransferOpData::CFileTransferOpData(wchar_t const* name, CFileTransferCommand const& cmd)
 	: COpData(Command::transfer, name)
 	, flags_(cmd.GetFlags())
-	, reader_factory_(cmd.GetReader()), writer_factory_(cmd.GetWriter()), localName_(reader_factory_ ? reader_factory_.name() : writer_factory_.name()), remoteFile_(cmd.GetRemoteFile()), remotePath_(cmd.GetRemotePath())
+	, reader_factory_(cmd.GetReader())
+	, writer_factory_(cmd.GetWriter())
+	, localName_(reader_factory_ ? reader_factory_.name() : writer_factory_.name())
+	, remoteFile_(cmd.GetRemoteFile())
+	, remotePath_(cmd.GetRemotePath())
 {
 	localFileSize_ = download() ? writer_factory_.size() : reader_factory_.size();
 	localFileTime_ = download() ? writer_factory_.mtime() : reader_factory_.mtime();
@@ -533,7 +538,7 @@ void CControlSocket::OnTimer(fz::timer_id)
 	if (timeout > 0) {
 		fz::duration elapsed = fz::monotonic_clock::now() - m_lastActivity;
 
-		if ((operations_.empty() || !operations_.back()->waitForAsyncRequest) && !opLockManager_.Waiting(this)) {
+		if ((operations_.empty() || operations_.back()->async_request_state_ == async_request_state::none) && !opLockManager_.Waiting(this)) {
 			if (elapsed > fz::duration::from_seconds(timeout)) {
 				log(logmsg::error, fztranslate("Connection timed out after %d second of inactivity", "Connection timed out after %d seconds of inactivity", timeout), timeout);
 				DoClose(FZ_REPLY_TIMEOUT);
@@ -586,7 +591,7 @@ int CControlSocket::SendNextCommand()
 
 	while (!operations_.empty()) {
 		auto & data = *operations_.back();
-		if (data.waitForAsyncRequest) {
+		if (data.async_request_state_ == async_request_state::waiting) {
 			log(logmsg::debug_info, L"Waiting for async request, ignoring SendNextCommand...");
 			return FZ_REPLY_WOULDBLOCK;
 		}
@@ -664,7 +669,7 @@ void CControlSocket::InvalidateCurrentWorkingDir(CServerPath const& path)
 	if (path.empty() || currentPath_.empty()) {
 		return;
 	}
-	
+
 	if (path.IsParentOf(currentPath_, false, true)) {
 		if (!operations_.empty()) {
 			m_invalidateCurrentPath = true;
@@ -687,7 +692,7 @@ fz::duration CControlSocket::GetInferredTimezoneOffset() const
 	return ret;
 }
 
-void CControlSocket::SendAsyncRequest(std::unique_ptr<CAsyncRequestNotification> && notification)
+void CControlSocket::SendAsyncRequest(std::unique_ptr<CAsyncRequestNotification> && notification, bool wait)
 {
 	if (!notification || operations_.empty()) {
 		return;
@@ -695,7 +700,7 @@ void CControlSocket::SendAsyncRequest(std::unique_ptr<CAsyncRequestNotification>
 	notification->requestNumber = engine_.GetNextAsyncRequestNumber();
 
 	if (!operations_.empty()) {
-		operations_.back()->waitForAsyncRequest = true;
+		operations_.back()->async_request_state_ = wait ? async_request_state::waiting : async_request_state::parallel;
 	}
 	engine_.AddNotification(std::move(notification));
 }
@@ -738,7 +743,7 @@ int CRealControlSocket::Send(unsigned char const* buffer, unsigned int len)
 		}
 
 		if (written) {
-			RecordActivity(activity_logger::send, written);
+			SetAlive();
 		}
 
 		if (static_cast<unsigned int>(written) < len) {
@@ -860,18 +865,12 @@ void CRealControlSocket::OnSocketError(int error)
 	DoClose();
 }
 
-int CRealControlSocket::DoConnect(std::wstring const& host, unsigned int port)
+void CRealControlSocket::CreateSocket(std::wstring const& host)
 {
-	SetWait(true);
-
-	if (currentServer_.GetEncodingType() == ENCODING_CUSTOM) {
-		log(logmsg::debug_info, L"Using custom encoding: %s", currentServer_.GetCustomEncoding());
-	}
-
 	ResetSocket();
 	socket_ = std::make_unique<fz::socket>(engine_.GetThreadPool(), nullptr);
 	activity_logger_layer_ = std::make_unique<activity_logger_layer>(nullptr, *socket_, engine_.activity_logger_);
-	ratelimit_layer_ = std::make_unique<fz::rate_limited_layer>(this, *activity_logger_layer_, &engine_.GetRateLimiter());
+	ratelimit_layer_ = std::make_unique<fz::rate_limited_layer>(nullptr, *activity_logger_layer_, &engine_.GetRateLimiter());
 	active_layer_ = ratelimit_layer_.get();
 
 	const int proxy_type = engine_.GetOptions().get_int(OPTION_PROXY_TYPE);
@@ -880,7 +879,7 @@ int CRealControlSocket::DoConnect(std::wstring const& host, unsigned int port)
 
 		fz::native_string proxy_host = fz::to_native(engine_.GetOptions().get_string(OPTION_PROXY_HOST));
 
-		proxy_layer_ = std::make_unique<CProxySocket>(this, *active_layer_, this, static_cast<ProxyType>(proxy_type),
+		proxy_layer_ = std::make_unique<CProxySocket>(nullptr, *active_layer_, this, static_cast<ProxyType>(proxy_type),
 			proxy_host, engine_.GetOptions().get_int(OPTION_PROXY_PORT),
 			engine_.GetOptions().get_string(OPTION_PROXY_USER),
 			engine_.GetOptions().get_string(OPTION_PROXY_PASS));
@@ -897,12 +896,24 @@ int CRealControlSocket::DoConnect(std::wstring const& host, unsigned int port)
 	}
 
 	SetSocketBufferSizes();
+}
 
+int CRealControlSocket::DoConnect(std::wstring const& host, unsigned int port)
+{
+	SetWait(true);
+
+	if (currentServer_.GetEncodingType() == ENCODING_CUSTOM) {
+		log(logmsg::debug_info, L"Using custom encoding: %s", currentServer_.GetCustomEncoding());
+	}
+
+	CreateSocket(host);
+
+	active_layer_->set_event_handler(this);
 	int res = active_layer_->connect(fz::to_native(ConvertDomainName(host)), port);
 
 	if (res) {
 		log(logmsg::error, _("Could not connect to server: %s"), fz::socket_error_description(res));
-		return FZ_REPLY_DISCONNECTED | FZ_REPLY_ERROR; 
+		return FZ_REPLY_DISCONNECTED | FZ_REPLY_ERROR;
 	}
 
 	return FZ_REPLY_WOULDBLOCK;
@@ -1012,7 +1023,7 @@ bool CControlSocket::SetFileExistsAction(CFileExistsNotification *pFileExistsNot
 		}
 		break;
 	case CFileExistsNotification::resume:
-		if (data.download() && data.localFileSize_ != aio_base::nosize) {
+		if (data.download() && data.localFileSize_ != fz::aio_base::nosize) {
 			data.resume_ = true;
 		}
 		else if (!data.download() && data.remoteFileSize_ >= 0) {
@@ -1102,7 +1113,7 @@ void CControlSocket::RemoveDir(CServerPath const&, std::wstring const&)
 	Push(std::make_unique<CNotSupportedOpData>());
 }
 
-void CControlSocket::Mkdir(CServerPath const&)
+void CControlSocket::Mkdir(CServerPath const&, transfer_flags const&)
 {
 	Push(std::make_unique<CNotSupportedOpData>());
 }
@@ -1151,12 +1162,12 @@ void CControlSocket::SendDirectoryListingNotification(CServerPath const& path, b
 
 void CControlSocket::CallSetAsyncRequestReply(CAsyncRequestNotification *pNotification)
 {
-	if (operations_.empty() || !operations_.back()->waitForAsyncRequest) {
+	if (operations_.empty() || operations_.back()->async_request_state_ == async_request_state::none) {
 		log(logmsg::debug_info, L"Not waiting for request reply, ignoring request reply %d", pNotification->GetRequestID());
 		return;
 	}
 
-	operations_.back()->waitForAsyncRequest = false;
+	operations_.back()->async_request_state_ = async_request_state::none;
 
 	SetAlive();
 	SetAsyncRequestReply(pNotification);
@@ -1165,6 +1176,47 @@ void CControlSocket::CallSetAsyncRequestReply(CAsyncRequestNotification *pNotifi
 void CControlSocket::Sleep(fz::duration const& delay)
 {
 	Push(std::make_unique<SleepOpData>(*this, delay));
+}
+
+bool CControlSocket::InitBufferPool(bool use_shm)
+{
+	if (!buffer_pool_) {
+		buffer_pool_.emplace(logger_, 8, 0, use_shm);
+	}
+	return *buffer_pool_;
+}
+
+std::unique_ptr<fz::writer_base> CControlSocket::OpenWriter(fz::writer_factory_holder & factory, uint64_t resumeOffset, bool withProgress)
+{
+	if (!factory || !buffer_pool_) {
+		return {};
+	}
+
+	auto file_writer = dynamic_cast<fz::file_writer_factory*>(&*factory);
+	if (file_writer) {
+		std::wstring tmp;
+		CLocalPath local_path(file_writer->name(), &tmp);
+		if (local_path.HasParent()) {
+			fz::native_string last_created;
+			fz::mkdir(fz::to_native(local_path.GetPath()), true, fz::mkdir_permissions::normal, &last_created);
+			if (!last_created.empty()) {
+				// Send out notification
+				auto n = std::make_unique<CLocalDirCreatedNotification>();
+				if (n->dir.SetPath(fz::to_wstring(last_created))) {
+					engine_.AddNotification(std::move(n));
+				}
+			}
+		}
+	}
+
+	fz::writer_base::progress_cb_t status_update;
+	if (withProgress) {
+		status_update = [&s = engine_.transfer_status_](fz::writer_base const*, uint64_t written) {
+			s.SetMadeProgress();
+			s.Update(written);
+		};
+	}
+	return factory->open(*buffer_pool_, resumeOffset, status_update, max_buffer_count());
 }
 
 int64_t CalculateNextChunkSize(int64_t remaining, int64_t lastChunkSize, fz::duration const& lastChunkDuration, int64_t minChunkSize, int64_t multiple, int64_t partCount, int64_t maxPartCount, int64_t maxChunkSize)
@@ -1215,4 +1267,9 @@ int64_t CalculateNextChunkSize(int64_t remaining, int64_t lastChunkSize, fz::dur
 int64_t CalculateNextChunkSize(int64_t remaining, int64_t lastChunkSize, fz::monotonic_clock const& lastChunkStart, int64_t minChunkSize, int64_t multiple, int64_t partCount, int64_t maxPartCount, int64_t maxChunkSize)
 {
 	return CalculateNextChunkSize(remaining, lastChunkSize, fz::monotonic_clock::now() - lastChunkStart, minChunkSize, multiple, partCount, maxPartCount, maxChunkSize);
+}
+
+size_t CControlSocket::max_buffer_count() const
+{
+	return buffer_pool_->buffer_count();
 }

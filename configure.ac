@@ -1,8 +1,8 @@
-AC_INIT([FileZilla],[3.59.0], [tim.kosse@filezilla-project.org],[],[https://filezilla-project.org/])
+AC_INIT([FileZilla],[3.65.0], [tim.kosse@filezilla-project.org],[],[https://filezilla-project.org/])
 AC_CONFIG_HEADERS([config/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR(config)
-AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip nostdinc])
+AM_INIT_AUTOMAKE([dist-xz no-dist-gzip nostdinc])
 
 AC_CANONICAL_HOST
 
@@ -73,6 +73,9 @@ if ! test "$localesonly" = "yes"; then
   # std::atomic on PPC seems to require -latomic
   CHECK_ATOMIC
 
+  # GCC bug 86164
+  CHECK_REGEX
+
   # Add build information to config.h
   # ---------------------------------
 
@@ -141,13 +144,6 @@ cd "$OLD_DIR"
 
 if test "$buildmain" = "yes"; then
 
-  if ! echo $host_os | grep "cygwin\|mingw" > /dev/null 2>&1; then
-    CHECK_MEMFD_CREATE
-    if test "$have_memfd_create" != "yes"; then
-      CHECK_LRT_FOR_SHM_OPEN
-    fi
-  fi
-
   # Require pkg-config
   # ------------------
   PKG_PROG_PKG_CONFIG
@@ -157,7 +153,7 @@ if test "$buildmain" = "yes"; then
 
   # Find libfilezilla
   # -----------------
-  PKG_CHECK_MODULES(LIBFILEZILLA, [libfilezilla >= 0.37.1],, [
+  PKG_CHECK_MODULES(LIBFILEZILLA, [libfilezilla >= 0.44.0],, [
 	AC_MSG_ERROR([libfilezilla not found: $LIBFILEZILLA_PKG_ERRORS. You can download it from https://lib.filezilla-project.org/])
   ])
   AC_SUBST(LIBFILEZILLA_CFLAGS)
@@ -186,11 +182,9 @@ if test "$buildmain" = "yes"; then
     ])
   fi
   if test "${WX_VERSION_MAJOR}.${WX_VERSION_MINOR}" = "3.1"; then
-    AC_MSG_ERROR([You must use wxWidgets 3.0.x, development versions of wxWidgets are not supported.])
-  elif test "${WX_VERSION_MAJOR}.${WX_VERSION_MINOR}" != "3.0"; then
-    AC_MSG_ERROR([You must use wxWidgets 3.0.x, wxWidgets 3.2 or higher is not yet supported.])
+    AC_MSG_ERROR([You must use wxWidgets 3.0.x, or 3.2.x, development versions of wxWidgets are not supported.])
   fi
-  
+
   if test "${WX_VERSION_MAJOR}.${WX_VERSION_MINOR}" = "3.0"; then
     MAC_REQUIRES_AQUA="YES"
   else

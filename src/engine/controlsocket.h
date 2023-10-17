@@ -12,6 +12,12 @@
 #include <libfilezilla/buffer.hpp>
 #include <libfilezilla/socket.hpp>
 
+enum class async_request_state : unsigned {
+	none,
+	waiting,
+	parallel
+};
+
 class COpData
 {
 public:
@@ -49,7 +55,7 @@ public:
 	logmsg::type sendLogLevel_{logmsg::debug_verbose};
 
 	bool topLevelOperation_{}; // If set to true, if this command finishes, any other commands on the stack do not get a SubCommandResult
-	bool waitForAsyncRequest{};
+	async_request_state async_request_state_{};
 };
 
 template<typename T>
@@ -139,13 +145,13 @@ public:
 	// starts the actual transfer
 	bool transferInitiated_{};
 
-	reader_factory_holder reader_factory_;
-	writer_factory_holder writer_factory_;
+	fz::reader_factory_holder reader_factory_;
+	fz::writer_factory_holder writer_factory_;
 	std::wstring localName_;
 	std::wstring remoteFile_;
 	CServerPath remotePath_;
 
-	uint64_t localFileSize_{aio_base::nosize};
+	uint64_t localFileSize_{fz::aio_base::nosize};
 	fz::datetime localFileTime_;
 
 	int64_t remoteFileSize_{-1};
@@ -191,7 +197,7 @@ class CTransferStatus;
 class CControlSocket : public fz::event_handler
 {
 public:
-	CControlSocket(CFileZillaEnginePrivate & engine);
+	CControlSocket(CFileZillaEnginePrivate & engine, bool use_shm = false);
 	virtual ~CControlSocket();
 
 	CControlSocket(CControlSocket const&) = delete;
@@ -209,14 +215,14 @@ public:
 	virtual void RawCommand(std::wstring const& command = std::wstring());
 	virtual void Delete(CServerPath const& path, std::vector<std::wstring>&& files);
 	virtual void RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring());
-	virtual void Mkdir(CServerPath const& path);
+	virtual void Mkdir(CServerPath const& path, transfer_flags const& flags);
 	virtual void Rename(CRenameCommand const& command);
 	virtual void Chmod(CChmodCommand const& command);
 	void Sleep(fz::duration const& delay);
 
 	Command GetCurrentCommandId() const;
 
-	void SendAsyncRequest(std::unique_ptr<CAsyncRequestNotification> && notification);
+	void SendAsyncRequest(std::unique_ptr<CAsyncRequestNotification> && notification, bool wait = true);
 	void CallSetAsyncRequestReply(CAsyncRequestNotification *pNotification);
 	bool SetFileExistsAction(CFileExistsNotification *pFileExistsNotification);
 
@@ -266,6 +272,8 @@ public:
 
 	fz::logger_interface& logger() const { return logger_; }
 
+	virtual size_t max_buffer_count() const;
+
 protected:
 	virtual void Lookup(CServerPath const& path, std::wstring const& file, CDirentry * entry = nullptr);
 	virtual void Lookup(CServerPath const& path, std::vector<std::wstring> const& files);
@@ -300,6 +308,11 @@ protected:
 
 	OpLock Lock(locking_reason reason, CServerPath const& path, bool inclusive = false);
 
+	bool InitBufferPool(bool use_shm);
+
+	std::unique_ptr<fz::writer_base> OpenWriter(fz::writer_factory_holder & h, uint64_t resumeOffset, bool withProgress);
+
+	std::optional<fz::aio_buffer_pool> buffer_pool_;
 	std::vector<std::unique_ptr<COpData>> operations_;
 	CFileZillaEnginePrivate & engine_;
 	CServer currentServer_;
@@ -342,6 +355,8 @@ public:
 	int DoConnect(std::wstring const& host, unsigned int port);
 
 protected:
+	void CreateSocket(std::wstring const& host);
+
 	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED | FZ_REPLY_ERROR) override;
 	virtual void ResetSocket();
 

@@ -1,8 +1,6 @@
 #include "../include/engine_options.h"
 
 namespace {
-option_registrator r(&register_engine_options);
-}
 
 unsigned int register_engine_options()
 {
@@ -44,7 +42,7 @@ unsigned int register_engine_options()
 		// Make it large enough by default
 		// to enable a large TCP window scale
 		{ "Socket recv buffer size (v2)", 4194304, option_flags::numeric_clamp, -1, 64 * 1024 * 1024, [](int& v)
-			{ 
+			{
 				if (v >= 0 && v < 4096) {
 					v = 4096;
 				}
@@ -80,7 +78,22 @@ unsigned int register_engine_options()
 		{ "Size decimal places", 1, option_flags::numeric_clamp, 0, 3 },
 		{ "TCP Keepalive Interval", 15, option_flags::numeric_clamp, 1, 10000 },
 		{ "Cache TTL", 600, option_flags::numeric_clamp, 30, 60*60*24 },
-		{ "Minimum TLS Version", 2, option_flags::numeric_clamp, 0, 3 }
+		{ "Minimum TLS Version", 2, option_flags::numeric_clamp, 0, 3 },
+		{ "Directory listing item limit", 10000000, option_flags::numeric_clamp, 1000000, 2000000000 }
 	});
 	return value;
+}
+
+option_registrator r(&register_engine_options);
+}
+
+optionsIndex mapOption(engineOptions opt)
+{
+	static unsigned int const offset = register_engine_options();
+
+	auto ret = optionsIndex::invalid;
+	if (opt < OPTIONS_ENGINE_NUM) {
+		return static_cast<optionsIndex>(opt + offset);
+	}
+	return ret;
 }

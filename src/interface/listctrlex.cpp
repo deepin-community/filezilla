@@ -49,6 +49,11 @@ wxListCtrlEx::wxListCtrlEx(wxWindow *parent,
 						   const wxValidator& validator,
 						   const wxString& name)
 {
+#if defined(__WXMSW__) && wxCHECK_VERSION(3, 2, 1)
+	// This gets rid of vertical lines between columns
+	EnableSystemTheme(false);
+#endif
+
 	Create(parent, id, pos, size, style, validator, name);
 
 #ifndef __WXMSW__
@@ -876,7 +881,7 @@ int wxListCtrlEx::GetColumnActualIndex(int col) const
 	if (!m_pVisibleColumnMapping) {
 		return -1;
 	}
-	if (col < 0 || col >= m_columnInfo.size()) {
+	if (col < 0 || static_cast<size_t>(col) >= m_columnInfo.size()) {
 		return -1;
 	}
 	return m_pVisibleColumnMapping[col];
@@ -976,6 +981,7 @@ void wxListCtrlEx::SetHeaderSortIconIndex(int col, int icon)
 
 	item.SetImage(icon);
 	SetColumn(col, item);
+	reinterpret_cast<wxWindow*>(m_headerWin)->Refresh();
 #endif
 }
 

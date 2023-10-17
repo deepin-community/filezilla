@@ -32,6 +32,8 @@
 
 #include <wx/menu.h>
 
+using namespace std::literals;
+
 class CLocalListViewDropTarget final : public CFileDropTarget<wxListCtrlEx>
 {
 public:
@@ -57,7 +59,7 @@ public:
 
 	virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxListCtrlEx>::FixupDragResult(def);
+		def = FixupDragResult(def);
 
 		if (def == wxDragError ||
 			def == wxDragNone ||
@@ -80,7 +82,7 @@ public:
 		}
 
 		std::wstring subdir;
-		int flags;
+		int flags{};
 		int hit = m_pLocalListView->HitTest(wxPoint(x, y), flags, 0);
 		if (hit != -1 && (flags & wxLIST_HITTEST_ONITEM)) {
 			const CLocalFileData* const data = m_pLocalListView->GetData(hit);
@@ -104,25 +106,26 @@ public:
 			return wxDragError;
 		}
 
-		auto const format = m_pDataObject->GetReceivedFormat();
+		auto const format = GetReceivedFormat();
 		if (format == m_pFileDataObject->GetFormat()) {
 			m_pLocalListView->m_state.HandleDroppedFiles(m_pFileDataObject, dir, def == wxDragCopy);
 		}
-		else if (format == m_pLocalDataObject->GetFormat()) {
-			m_pLocalListView->m_state.HandleDroppedFiles(m_pLocalDataObject, dir, def == wxDragCopy);
+		else if (format == LocalDataObjectFormat()) {
+			m_pLocalListView->m_state.HandleDroppedFiles(GetLocalDataObject(), dir, def == wxDragCopy);
 		}
 		else {
-			if (m_pRemoteDataObject->GetProcessId() != (int)wxGetProcessId()) {
+			auto * obj = GetRemoteDataObject();
+			if (obj->GetProcessId() != (int)wxGetProcessId()) {
 				wxMessageBoxEx(_("Drag&drop between different instances of FileZilla has not been implemented yet."));
 				return wxDragNone;
 			}
 
-			if (!m_pLocalListView->m_state.GetSite() || m_pRemoteDataObject->GetSite().server != m_pLocalListView->m_state.GetSite().server) {
+			if (!m_pLocalListView->m_state.GetSite() || obj->GetSite().server != m_pLocalListView->m_state.GetSite().server) {
 				wxMessageBoxEx(_("Drag&drop between different servers has not been implemented yet."));
 				return wxDragNone;
 			}
 
-			if (!m_pLocalListView->m_state.DownloadDroppedFiles(m_pRemoteDataObject, dir)) {
+			if (!m_pLocalListView->m_state.DownloadDroppedFiles(obj, dir)) {
 				return wxDragNone;
 			}
 		}
@@ -132,7 +135,7 @@ public:
 
 	virtual bool OnDrop(wxCoord x, wxCoord y)
 	{
-		CScrollableDropTarget<wxListCtrlEx>::OnDrop(x, y);
+		CFileDropTarget::OnDrop(x, y);
 		ClearDropHighlight();
 
 		if (m_pLocalListView->m_fileData.empty()) {
@@ -152,7 +155,7 @@ public:
 	{
 		wxString subDir;
 
-		int flags;
+		int flags{};
 		int hit = m_pLocalListView->HitTest(point, flags, 0);
 		if (!(flags & wxLIST_HITTEST_ONITEM)) {
 			hit = -1;
@@ -195,7 +198,7 @@ public:
 
 	virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxListCtrlEx>::OnDragOver(x, y, def);
+		def = CFileDropTarget::OnDragOver(x, y, def);
 
 		if (def == wxDragError ||
 			def == wxDragNone ||
@@ -234,13 +237,13 @@ public:
 
 	virtual void OnLeave()
 	{
-		CScrollableDropTarget<wxListCtrlEx>::OnLeave();
+		CFileDropTarget::OnLeave();
 		ClearDropHighlight();
 	}
 
 	virtual wxDragResult OnEnter(wxCoord x, wxCoord y, wxDragResult def)
 	{
-		def = CScrollableDropTarget<wxListCtrlEx>::OnEnter(x, y, def);
+		def = CFileDropTarget::OnEnter(x, y, def);
 		return OnDragOver(x, y, def);
 	}
 
@@ -276,7 +279,7 @@ CLocalListView::CLocalListView(CView* pParent, CState& state, CQueueView *pQueue
 	CStateEventHandler(state),
 	m_parentView(pParent)
 {
-	wxGetApp().AddStartupProfileRecord("CLocalListView::CLocalListView");
+	wxGetApp().AddStartupProfileRecord("CLocalListView::CLocalListView"sv);
 	m_state.RegisterHandler(this, STATECHANGE_LOCAL_DIR);
 	m_state.RegisterHandler(this, STATECHANGE_APPLYFILTER);
 	m_state.RegisterHandler(this, STATECHANGE_LOCAL_REFRESH_FILE);
@@ -807,10 +810,10 @@ void CLocalListView::OnContextMenu(wxContextMenuEvent& event)
 	wxMenu menu;
 
 	auto item = new wxMenuItem(&menu, XRCID("ID_UPLOAD"), _("&Upload"), _("Upload selected files and directories"));
-	item->SetBitmap(wxArtProvider::GetBitmap(_T("ART_UPLOAD"), wxART_MENU));
+	item->SetBitmap(MakeBmpBundle(wxArtProvider::GetBitmap(_T("ART_UPLOAD"), wxART_MENU)));
 	menu.Append(item);
 	item = new wxMenuItem(&menu, XRCID("ID_ADDTOQUEUE"), _("&Add files to queue"), _("Add selected files and folders to the transfer queue"));
-	item->SetBitmap(wxArtProvider::GetBitmap(_T("ART_UPLOADADD"), wxART_MENU));
+	item->SetBitmap(MakeBmpBundle(wxArtProvider::GetBitmap(_T("ART_UPLOADADD"), wxART_MENU)));
 	menu.Append(item);
 	menu.Append(XRCID("ID_ENTER"), _("E&nter directory"), _("Enter selected directory"));
 
@@ -1405,10 +1408,10 @@ void CLocalListView::OnStateChange(t_statechange_notifications notification, std
 	}
 	else if (notification == STATECHANGE_SERVER) {
 		if (m_windowTinter) {
-			m_windowTinter->SetBackgroundTint(site_colour_to_wx(m_state.GetSite().m_colour));
+			m_windowTinter->SetBackgroundTint(m_state.GetSite().m_colour);
 		}
 		if (m_pInfoText) {
-			m_pInfoText->SetBackgroundTint(site_colour_to_wx(m_state.GetSite().m_colour));
+			m_pInfoText->SetBackgroundTint(m_state.GetSite().m_colour);
 		}
 	}
 	else {
@@ -1461,6 +1464,7 @@ void CLocalListView::OnBeginDrag(wxListEvent&)
 	CDragDropManager* pDragDropManager = CDragDropManager::Init();
 	pDragDropManager->pDragSource = this;
 	pDragDropManager->localParent = m_dir;
+	pDragDropManager->dragDataObject = &obj;
 
 	auto const path = m_dir.GetPath();
 
@@ -1494,12 +1498,11 @@ void CLocalListView::OnBeginDrag(wxListEvent&)
 
 	CLabelEditBlocker b(*this);
 
-	wxDropSource source(this);
+	DropSource source(this);
 	source.SetData(obj);
-	int res = source.DoDragDrop(wxDrag_AllowMove);
+	int res = source.DoFileDragDrop(wxDrag_AllowMove);
 
 	bool handled_internally = pDragDropManager->pDropTarget != 0;
-
 	pDragDropManager->Release();
 
 	if (!handled_internally && (res == wxDragCopy || res == wxDragMove)) {
@@ -1507,6 +1510,13 @@ void CLocalListView::OnBeginDrag(wxListEvent&)
 		// externally, the internal handlers do this for us already
 		m_state.RefreshLocal();
 	}
+
+#ifdef __WXMAC__
+	if (!source.m_OutDir.IsEmpty()) {
+		CLocalPath target(source.m_OutDir.ToStdWstring());
+		m_state.HandleDroppedFiles(&obj, target, true);
+	}
+#endif
 }
 
 void CLocalListView::RefreshFile(std::wstring const& file)
@@ -1891,7 +1901,7 @@ void CLocalListView::OnMenuOpen(wxCommandEvent&)
 	}
 
 	if (selected_item_list.size() > 10) {
-		CConditionalDialog dlg(this, CConditionalDialog::many_selected_for_edit, CConditionalDialog::yesno);
+		CConditionalDialog dlg(this, CConditionalDialog::many_selected_for_edit, CConditionalDialog::yesno, options_);
 		dlg.SetTitle(_("Confirmation needed"));
 		dlg.AddText(_("You have selected more than 10 files or directories to open, do you really want to continue?"));
 

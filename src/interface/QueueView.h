@@ -134,7 +134,7 @@ public:
 	bool empty() const;
 	int IsActive() const { return m_activeMode; }
 	bool SetActive(bool active = true);
-	bool Quit();
+	bool Quit(bool force = false);
 
 	// This sets the default file exists action for all files currently in queue.
 	void SetDefaultFileExistsAction(CFileExistsNotification::OverwriteAction action, const TransferDirection direction);
@@ -152,9 +152,9 @@ public:
 
 	virtual void ProcessNotification(CFileZillaEngine* pEngine, std::unique_ptr<CNotification>&& pNotification) override;
 
-	void RenameFileInTransfer(CFileZillaEngine *pEngine, std::wstring const& newName, bool local, writer_factory_holder & new_writer);
+	void RenameFileInTransfer(CFileZillaEngine *pEngine, std::wstring const& newName, bool local, fz::writer_factory_holder & new_writer);
 
-	static std::wstring ReplaceInvalidCharacters(std::wstring const& filename, bool includeQuotesAndBreaks = false);
+	static std::wstring ReplaceInvalidCharacters(COptionsBase& options, std::wstring const& filename, bool includeQuotesAndBreaks = false);
 
 	std::shared_ptr<CActionAfterBlocker> GetActionAfterBlocker();
 

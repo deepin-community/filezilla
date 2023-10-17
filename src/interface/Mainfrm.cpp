@@ -71,6 +71,8 @@
 #include <limits>
 #include <map>
 
+using namespace std::literals;
+
 #ifdef __WXGTK__
 wxDECLARE_EVENT(fzEVT_TASKBAR_CLICK_DELAYED, wxCommandEvent);
 wxDEFINE_EVENT(fzEVT_TASKBAR_CLICK_DELAYED, wxCommandEvent);
@@ -127,13 +129,10 @@ BEGIN_EVENT_TABLE(CMainFrame, wxNavigationEnabled<wxFrame>)
 	EVT_SIZE(CMainFrame::OnSize)
 	EVT_MENU(wxID_ANY, CMainFrame::OnMenuHandler)
 	EVT_TOOL(XRCID("ID_TOOLBAR_DISCONNECT"), CMainFrame::OnDisconnect)
-	EVT_MENU(XRCID("ID_MENU_SERVER_DISCONNECT"), CMainFrame::OnDisconnect)
 	EVT_TOOL(XRCID("ID_TOOLBAR_CANCEL"), CMainFrame::OnCancel)
-	EVT_MENU(XRCID("ID_CANCEL"), CMainFrame::OnCancel)
 	EVT_TOOL(XRCID("ID_TOOLBAR_RECONNECT"), CMainFrame::OnReconnect)
 	EVT_TOOL(XRCID("ID_MENU_SERVER_RECONNECT"), CMainFrame::OnReconnect)
 	EVT_TOOL(XRCID("ID_TOOLBAR_REFRESH"), CMainFrame::OnRefresh)
-	EVT_MENU(XRCID("ID_REFRESH"), CMainFrame::OnRefresh)
 	EVT_TOOL(XRCID("ID_TOOLBAR_SITEMANAGER"), CMainFrame::OnSiteManager)
 	EVT_CLOSE(CMainFrame::OnClose)
 #ifdef WITH_LIBDBUS
@@ -145,34 +144,20 @@ BEGIN_EVENT_TABLE(CMainFrame, wxNavigationEnabled<wxFrame>)
 	EVT_TOOL(XRCID("ID_TOOLBAR_LOCALTREEVIEW"), CMainFrame::OnToggleDirectoryTreeView)
 	EVT_TOOL(XRCID("ID_TOOLBAR_REMOTETREEVIEW"), CMainFrame::OnToggleDirectoryTreeView)
 	EVT_TOOL(XRCID("ID_TOOLBAR_QUEUEVIEW"), CMainFrame::OnToggleQueueView)
-	EVT_MENU(XRCID("ID_VIEW_TOOLBAR"), CMainFrame::OnToggleToolBar)
-	EVT_MENU(XRCID("ID_VIEW_MESSAGELOG"), CMainFrame::OnToggleLogView)
-	EVT_MENU(XRCID("ID_VIEW_LOCALTREE"), CMainFrame::OnToggleDirectoryTreeView)
-	EVT_MENU(XRCID("ID_VIEW_REMOTETREE"), CMainFrame::OnToggleDirectoryTreeView)
-	EVT_MENU(XRCID("ID_VIEW_QUEUE"), CMainFrame::OnToggleQueueView)
-	EVT_MENU(wxID_ABOUT, CMainFrame::OnMenuHelpAbout)
 	EVT_TOOL(XRCID("ID_TOOLBAR_FILTER"), CMainFrame::OnFilter)
 	EVT_TOOL_RCLICKED(XRCID("ID_TOOLBAR_FILTER"), CMainFrame::OnFilterRightclicked)
-#if FZ_MANUALUPDATECHECK
-	EVT_MENU(XRCID("ID_CHECKFORUPDATES"), CMainFrame::OnCheckForUpdates)
-	EVT_MENU(GetAvailableUpdateMenuId(), CMainFrame::OnCheckForUpdates)
-#endif //FZ_MANUALUPDATECHECK
 	EVT_TOOL_RCLICKED(XRCID("ID_TOOLBAR_SITEMANAGER"), CMainFrame::OnSitemanagerDropdown)
 #ifdef EVT_TOOL_DROPDOWN
 	EVT_TOOL_DROPDOWN(XRCID("ID_TOOLBAR_SITEMANAGER"), CMainFrame::OnSitemanagerDropdown)
 #endif
 	EVT_NAVIGATION_KEY(CMainFrame::OnNavigationKeyEvent)
 	EVT_CHAR_HOOK(CMainFrame::OnChar)
-	EVT_MENU(XRCID("ID_MENU_VIEW_FILTERS"), CMainFrame::OnFilter)
 	EVT_ACTIVATE(CMainFrame::OnActivate)
 	EVT_TOOL(XRCID("ID_TOOLBAR_COMPARISON"), CMainFrame::OnToolbarComparison)
 	EVT_TOOL_RCLICKED(XRCID("ID_TOOLBAR_COMPARISON"), CMainFrame::OnToolbarComparisonDropdown)
 #ifdef EVT_TOOL_DROPDOWN
 	EVT_TOOL_DROPDOWN(XRCID("ID_TOOLBAR_COMPARISON"), CMainFrame::OnToolbarComparisonDropdown)
 #endif
-	EVT_MENU(XRCID("ID_COMPARE_SIZE"), CMainFrame::OnDropdownComparisonMode)
-	EVT_MENU(XRCID("ID_COMPARE_DATE"), CMainFrame::OnDropdownComparisonMode)
-	EVT_MENU(XRCID("ID_COMPARE_HIDEIDENTICAL"), CMainFrame::OnDropdownComparisonHide)
 	EVT_TOOL(XRCID("ID_TOOLBAR_SYNCHRONIZED_BROWSING"), CMainFrame::OnSyncBrowse)
 #ifdef __WXMAC__
 	EVT_CHILD_FOCUS(CMainFrame::OnChildFocused)
@@ -183,9 +168,6 @@ BEGIN_EVENT_TABLE(CMainFrame, wxNavigationEnabled<wxFrame>)
 	EVT_COMMAND(wxID_ANY, fzEVT_TASKBAR_CLICK_DELAYED, CMainFrame::OnTaskBarClick_Delayed)
 #endif
 	EVT_TOOL(XRCID("ID_TOOLBAR_FIND"), CMainFrame::OnSearch)
-	EVT_MENU(XRCID("ID_MENU_SERVER_SEARCH"), CMainFrame::OnSearch)
-	EVT_MENU(XRCID("ID_MENU_FILE_NEWTAB"), CMainFrame::OnMenuNewTab)
-	EVT_MENU(XRCID("ID_MENU_FILE_CLOSETAB"), CMainFrame::OnMenuCloseTab)
 END_EVENT_TABLE()
 
 class CMainFrameStateEventHandler final : public CGlobalStateEventHandler
@@ -362,7 +344,7 @@ CMainFrame::CMainFrame(COptions& options)
 	, m_engineContext(options, CustomEncodingConverter::Get())
 	, m_comparisonToggleAcceleratorId(wxNewId())
 {
-	wxGetApp().AddStartupProfileRecord("CMainFrame::CMainFrame");
+	wxGetApp().AddStartupProfileRecord("CMainFrame::CMainFrame"sv);
 	wxRect screen_size = CWindowStateManager::GetScreenDimensions();
 
 	wxSize initial_size;
@@ -413,7 +395,7 @@ CMainFrame::CMainFrame(COptions& options)
 		CreateQuickconnectBar();
 	}
 
-	cert_store_ = std::make_unique<CertStore>();
+	cert_store_ = std::make_unique<CertStore>(options_.get_int(OPTION_DEFAULT_KIOSKMODE) == 2);
 	async_request_queue_ = std::make_unique<CAsyncRequestQueue>(this, options_, *cert_store_);
 
 #ifdef __WXMSW__
@@ -440,10 +422,10 @@ CMainFrame::CMainFrame(COptions& options)
 	m_pQueuePane = new CQueue(m_pQueueLogSplitter, this, async_request_queue_.get(), *cert_store_);
 
 	if (message_log_position == 1) {
-		m_pStatusView = new CStatusView(m_pQueueLogSplitter, -1);
+		m_pStatusView = new CStatusView(m_pQueueLogSplitter, options_);
 	}
 	else {
-		m_pStatusView = new CStatusView(m_pTopSplitter, -1);
+		m_pStatusView = new CStatusView(m_pTopSplitter, options_);
 	}
 
 	m_pQueueView = m_pQueuePane->GetQueueView();
@@ -515,7 +497,11 @@ CMainFrame::CMainFrame(COptions& options)
 		m_pBottomSplitter->Initialize(m_pContextControl);
 	}
 
-	wxGetApp().AddStartupProfileRecord("CMainFrame::CMainFrame pre layout");
+#ifdef __WXMAC__
+	EnableFullScreenView(true, wxFULLSCREEN_NOMENUBAR);
+#endif
+
+	wxGetApp().AddStartupProfileRecord("CMainFrame::CMainFrame pre layout"sv);
 	m_pWindowStateManager = new CWindowStateManager(this);
 	m_pWindowStateManager->Restore(OPTION_MAINWINDOW_POSITION);
 
@@ -555,6 +541,10 @@ CMainFrame::~CMainFrame()
 	CPowerManagement::Destroy();
 
 	delete m_pStateEventHandler;
+
+	if (m_pQueueView) {
+		m_pQueueView->Quit(true);
+	}
 
 	delete m_pContextControl;
 	m_pContextControl = 0;
@@ -620,7 +610,7 @@ void CMainFrame::OnSize(wxSizeEvent &event)
 
 void CMainFrame::CreateMenus()
 {
-	wxGetApp().AddStartupProfileRecord("CMainFrame::CreateMenus");
+	wxGetApp().AddStartupProfileRecord("CMainFrame::CreateMenus"sv);
 	CMenuBar* old = m_pMenuBar;
 
 	m_pMenuBar = new CMenuBar(*this, options_);
@@ -631,7 +621,7 @@ void CMainFrame::CreateMenus()
 
 void CMainFrame::CreateQuickconnectBar()
 {
-	wxGetApp().AddStartupProfileRecord("CMainFrame::CreateQuickconnectBar");
+	wxGetApp().AddStartupProfileRecord("CMainFrame::CreateQuickconnectBar"sv);
 	delete m_pQuickconnectBar;
 
 	m_pQuickconnectBar = new CQuickconnectBar(*this);
@@ -646,13 +636,74 @@ void CMainFrame::CreateQuickconnectBar()
 
 void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 {
-	if (event.GetId() == XRCID("wxID_EXIT")) {
+	if (!wxDialogEx::IsActiveTLW(this)) {
+		return;
+	}
+
+	auto const id = event.GetId();
+	if (id == XRCID("ID_MENU_SERVER_SEARCH")) {
+		OnSearch(event);
+	}
+	else if (id == XRCID("ID_MENU_FILE_NEWTAB")) {
+		OnMenuNewTab(event);
+	}
+	else if (id == XRCID("ID_MENU_FILE_CLOSETAB")) {
+		OnMenuCloseTab(event);
+	}
+	else if (id == XRCID("ID_MENU_SERVER_DISCONNECT")) {
+		OnDisconnect(event);
+	}
+	else if (id == XRCID("ID_CANCEL")) {
+		OnCancel(event);
+	}
+	else if (id == XRCID("ID_REFRESH")) {
+		OnRefresh(event);
+	}
+	else if (id == XRCID("ID_VIEW_TOOLBAR")) {
+		OnToggleToolBar(event);
+	}
+	else if (id == XRCID("ID_VIEW_MESSAGELOG")) {
+		OnToggleLogView(event);
+	}
+	else if (id == XRCID("ID_VIEW_LOCALTREE")) {
+		OnToggleDirectoryTreeView(event);
+	}
+	else if (id == XRCID("ID_VIEW_REMOTETREE")) {
+		OnToggleDirectoryTreeView(event);
+	}
+	else if (id == XRCID("ID_VIEW_QUEUE")) {
+		OnToggleQueueView(event);
+	}
+	else if (id == wxID_ABOUT) {
+		OnMenuHelpAbout(event);
+	}
+#if FZ_MANUALUPDATECHECK
+	else if (id == XRCID("ID_CHECKFORUPDATES")) {
+		OnCheckForUpdates(event);
+	}
+	else if (id == GetAvailableUpdateMenuId()) {
+		OnCheckForUpdates(event);
+	}
+#endif //FZ_MANUALUPDATECHECK
+	else if (id == XRCID("ID_MENU_VIEW_FILTERS")) {
+		OnFilter(event);
+	}
+	else if (id == XRCID("ID_COMPARE_SIZE")) {
+		OnDropdownComparisonMode(event);
+	}
+	else if (id == XRCID("ID_COMPARE_DATE")) {
+		OnDropdownComparisonMode(event);
+	}
+	else if (id == XRCID("ID_COMPARE_HIDEIDENTICAL")) {
+		OnDropdownComparisonHide(event);
+	}
+	else if (id == XRCID("wxID_EXIT")) {
 		Close();
 	}
-	else if (event.GetId() == XRCID("ID_MENU_FILE_SITEMANAGER")) {
+	else if (id == XRCID("ID_MENU_FILE_SITEMANAGER")) {
 		OpenSiteManager();
 	}
-	else if (event.GetId() == XRCID("ID_MENU_FILE_COPYSITEMANAGER")) {
+	else if (id == XRCID("ID_MENU_FILE_COPYSITEMANAGER")) {
 		Site site;
 		CState* pState = CContextManager::Get()->GetCurrentContext();
 		if (pState) {
@@ -664,7 +715,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		}
 		OpenSiteManager(&site);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_SERVER_CMD")) {
+	else if (id == XRCID("ID_MENU_SERVER_CMD")) {
 		CState* pState = CContextManager::Get()->GetCurrentContext();
 		if (!pState || !pState->m_pCommandQueue || !pState->IsRemoteConnected() || !pState->IsRemoteIdle()) {
 			return;
@@ -685,7 +736,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		const wxString &command = dlg.GetValue();
 
 		if (!command.Left(5).CmpNoCase(_T("quote")) || !command.Left(6).CmpNoCase(_T("quote "))) {
-			CConditionalDialog condDlg(this, CConditionalDialog::rawcommand_quote, CConditionalDialog::yesno);
+			CConditionalDialog condDlg(this, CConditionalDialog::rawcommand_quote, CConditionalDialog::yesno, options_);
 			condDlg.SetTitle(_("Raw FTP command"));
 
 			condDlg.AddText(_("'quote' is usually a local command used by commandline clients to send the arguments following 'quote' to the server. You might want to enter the raw command without the leading 'quote'."));
@@ -703,16 +754,16 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		}
 		pState->m_pCommandQueue->ProcessCommand(new CRawCommand(dlg.GetValue().ToStdWstring()));
 	}
-	else if (event.GetId() == XRCID("wxID_PREFERENCES")) {
+	else if (id == XRCID("wxID_PREFERENCES")) {
 		OnMenuEditSettings(event);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_EDIT_NETCONFWIZARD")) {
-		CNetConfWizard wizard(this, &options_, m_engineContext);
+	else if (id == XRCID("ID_MENU_EDIT_NETCONFWIZARD")) {
+		CNetConfWizard wizard(this, m_engineContext);
 		wizard.Load();
 		wizard.Run();
 	}
 	// Debug menu
-	else if (event.GetId() == XRCID("ID_CIPHERS")) {
+	else if (id == XRCID("ID_CIPHERS")) {
 		CInputDialog dlg;
 		dlg.Create(this, _T("Ciphers"), _T("Priority string:"));
 		dlg.AllowEmpty(true);
@@ -721,21 +772,21 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 			wxMessageBoxEx(fz::to_wstring(ciphers), _T("Ciphers"));
 		}
 	}
-	else if (event.GetId() == XRCID("ID_CLEARCACHE_LAYOUT")) {
+	else if (id == XRCID("ID_CLEARCACHE_LAYOUT")) {
 		CWrapEngine::ClearCache();
 	}
-	else if (event.GetId() == XRCID("ID_CLEAR_UPDATER")) {
+	else if (id == XRCID("ID_CLEAR_UPDATER")) {
 #if FZ_MANUALUPDATECHECK
 		if (m_pUpdater) {
 			m_pUpdater->Reset();
 		}
 #endif
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_FILEEXISTS")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_FILEEXISTS")) {
 		CDefaultFileExistsDlg dlg;
 		dlg.Run(this, false);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_EDIT_CLEARPRIVATEDATA")) {
+	else if (id == XRCID("ID_MENU_EDIT_CLEARPRIVATEDATA")) {
 		CClearPrivateDataDialog* pDlg = CClearPrivateDataDialog::Create(this);
 		if (!pDlg) {
 			return;
@@ -751,10 +802,10 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 			m_pToolBar->UpdateToolbarState();
 		}
 	}
-	else if (event.GetId() == XRCID("ID_MENU_SERVER_VIEWHIDDEN")) {
+	else if (id == XRCID("ID_MENU_SERVER_VIEWHIDDEN")) {
 		bool showHidden = options_.get_int(OPTION_VIEW_HIDDEN_FILES) ? 0 : 1;
 		if (showHidden) {
-			CConditionalDialog dlg(this, CConditionalDialog::viewhidden, CConditionalDialog::ok, false);
+			CConditionalDialog dlg(this, CConditionalDialog::viewhidden, CConditionalDialog::ok, options_, false);
 			dlg.SetTitle(_("Force showing hidden files"));
 
 			dlg.AddText(_("Note that this feature is only supported using the FTP protocol."));
@@ -773,46 +824,46 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 			}
 		}
 	}
-	else if (event.GetId() == XRCID("ID_EXPORT")) {
+	else if (id == XRCID("ID_EXPORT")) {
 		CExportDialog dlg(this, m_pQueueView);
 		dlg.Run();
 	}
-	else if (event.GetId() == XRCID("ID_IMPORT")) {
+	else if (id == XRCID("ID_IMPORT")) {
 		CImportDialog dlg(this, m_pQueueView);
-		dlg.Run();
+		dlg.Run(options_);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_FILE_EDITED")) {
+	else if (id == XRCID("ID_MENU_FILE_EDITED")) {
 		CEditHandlerStatusDialog dlg(this);
 		dlg.ShowModal();
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_TYPE_AUTO")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_TYPE_AUTO")) {
 		options_.set(OPTION_ASCIIBINARY, 0);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_TYPE_ASCII")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_TYPE_ASCII")) {
 		options_.set(OPTION_ASCIIBINARY, 1);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_TYPE_BINARY")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_TYPE_BINARY")) {
 		options_.set(OPTION_ASCIIBINARY, 2);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_PRESERVETIMES")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_PRESERVETIMES")) {
 		if (event.IsChecked()) {
-			CConditionalDialog dlg(this, CConditionalDialog::confirm_preserve_timestamps, CConditionalDialog::ok, true);
+			CConditionalDialog dlg(this, CConditionalDialog::confirm_preserve_timestamps, CConditionalDialog::ok, options_, true);
 			dlg.SetTitle(_("Preserving file timestamps"));
 			dlg.AddText(_("Please note that preserving timestamps on uploads on FTP, FTPS and FTPES servers only works if they support the MFMT command."));
 			dlg.Run();
 		}
 		options_.set(OPTION_PRESERVE_TIMESTAMPS, event.IsChecked() ? 1 : 0);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_PROCESSQUEUE")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_PROCESSQUEUE")) {
 		if (m_pQueueView) {
 			m_pQueueView->SetActive(event.IsChecked());
 		}
 	}
-	else if (event.GetId() == XRCID("ID_MENU_HELP_GETTINGHELP") ||
-			 event.GetId() == XRCID("ID_MENU_HELP_BUGREPORT"))
+	else if (id == XRCID("ID_MENU_HELP_GETTINGHELP") ||
+			 id == XRCID("ID_MENU_HELP_BUGREPORT"))
 	{
 		wxString url(_T("https://filezilla-project.org/support.php?type=client&mode="));
-		if (event.GetId() == XRCID("ID_MENU_HELP_GETTINGHELP")) {
+		if (id == XRCID("ID_MENU_HELP_GETTINGHELP")) {
 			url += _T("help");
 		}
 		else {
@@ -840,12 +891,12 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		}
 		wxLaunchDefaultBrowser(url);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_VIEW_FILELISTSTATUSBAR")) {
+	else if (id == XRCID("ID_MENU_VIEW_FILELISTSTATUSBAR")) {
 		bool show = options_.get_int(OPTION_FILELIST_STATUSBAR) == 0;
 		options_.set(OPTION_FILELIST_STATUSBAR, show ? 1 : 0);
 		CContextControl::_context_controls* controls = m_pContextControl ? m_pContextControl->GetCurrentControls() : 0;
 		if (controls && controls->pLocalListViewPanel) {
-			wxStatusBar* pStatusBar = controls->pLocalListViewPanel->GetStatusBar();
+			auto* pStatusBar = controls->pLocalListViewPanel->GetStatusBar();
 			if (pStatusBar) {
 				pStatusBar->Show(show);
 				wxSizeEvent evt;
@@ -853,7 +904,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 			}
 		}
 		if (controls && controls->pRemoteListViewPanel) {
-			wxStatusBar* pStatusBar = controls->pRemoteListViewPanel->GetStatusBar();
+			auto* pStatusBar = controls->pRemoteListViewPanel->GetStatusBar();
 			if (pStatusBar) {
 				pStatusBar->Show(show);
 				wxSizeEvent evt;
@@ -861,7 +912,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 			}
 		}
 	}
-	else if (event.GetId() == XRCID("ID_VIEW_QUICKCONNECT")) {
+	else if (id == XRCID("ID_VIEW_QUICKCONNECT")) {
 		if (!m_pQuickconnectBar) {
 			CreateQuickconnectBar();
 		}
@@ -873,7 +924,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		}
 		options_.set(OPTION_SHOW_QUICKCONNECT, m_pQuickconnectBar != 0);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_MANUAL")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_MANUAL")) {
 		CState* pState = CContextManager::Get()->GetCurrentContext();
 		if (!pState || !m_pQueueView) {
 			wxBell();
@@ -882,7 +933,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		CManualTransfer dlg(options_, m_pQueueView);
 		dlg.Run(this, pState);
 	}
-	else if (event.GetId() == XRCID("ID_BOOKMARK_ADD") || event.GetId() == XRCID("ID_BOOKMARK_MANAGE")) {
+	else if (id == XRCID("ID_BOOKMARK_ADD") || id == XRCID("ID_BOOKMARK_MANAGE")) {
 		CState* pState = CContextManager::Get()->GetCurrentContext();
 		if (!pState) {
 			return;
@@ -898,17 +949,17 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 
 		// controls->last_bookmark_path can get modified if it's empty now
 		int res;
-		if (event.GetId() == XRCID("ID_BOOKMARK_ADD")) {
-			CNewBookmarkDialog dlg(this, sitePath, old_site ? &old_site : 0);
+		if (id == XRCID("ID_BOOKMARK_ADD")) {
+			CNewBookmarkDialog dlg(this, options_, sitePath, old_site ? &old_site : 0);
 			res = dlg.Run(pState->GetLocalDir().GetPath(), pState->GetRemotePath());
 		}
 		else {
-			CBookmarksDialog dlg(this, sitePath, old_site ? &old_site : 0);
+			CBookmarksDialog dlg(this, options_, sitePath, old_site ? &old_site : 0);
 			res = dlg.Run();
 		}
 		if (res == wxID_OK) {
 			if (!sitePath.empty()) {
-				std::unique_ptr<Site> site = CSiteManager::GetSiteByPath(sitePath, false).first;
+				std::unique_ptr<Site> site = CSiteManager::GetSiteByPath(options_, sitePath, false).first;
 				if (site) {
 					for (int i = 0; i < m_pContextControl->GetTabCount(); ++i) {
 						CContextControl::_context_controls *tab_controls = m_pContextControl->GetControlsFromTabIndex(i);
@@ -920,28 +971,28 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 			}
 		}
 	}
-	else if (event.GetId() == XRCID("ID_MENU_HELP_WELCOME")) {
+	else if (id == XRCID("ID_MENU_HELP_WELCOME")) {
 		CWelcomeDialog dlg(options_, this);
 		dlg.Run(true);
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_SPEEDLIMITS_ENABLE")) {
+	else if (id == XRCID("ID_MENU_TRANSFER_SPEEDLIMITS_ENABLE")) {
 		bool enable = options_.get_int(OPTION_SPEEDLIMIT_ENABLE) == 0;
 
 		const int downloadLimit = options_.get_int(OPTION_SPEEDLIMIT_INBOUND);
 		const int uploadLimit = options_.get_int(OPTION_SPEEDLIMIT_OUTBOUND);
 		if (enable && !downloadLimit && !uploadLimit) {
-			CSpeedLimitsDialog dlg;
+			CSpeedLimitsDialog dlg(options_);
 			dlg.Run(this);
 		}
 		else {
 			options_.set(OPTION_SPEEDLIMIT_ENABLE, enable ? 1 : 0);
 		}
 	}
-	else if (event.GetId() == XRCID("ID_MENU_TRANSFER_SPEEDLIMITS_CONFIGURE")) {
-		CSpeedLimitsDialog dlg;
+	else if (id == XRCID("ID_MENU_TRANSFER_SPEEDLIMITS_CONFIGURE")) {
+		CSpeedLimitsDialog dlg(options_);
 		dlg.Run(this);
 	}
-	else if (event.GetId() == m_comparisonToggleAcceleratorId) {
+	else if (id == m_comparisonToggleAcceleratorId) {
 		CState* pState = CContextManager::Get()->GetCurrentContext();
 		if (!pState) {
 			return;
@@ -960,7 +1011,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 	}
 	else {
 		for (int i = 0; i < 10; ++i) {
-			if (event.GetId() != tab_hotkey_ids[i]) {
+			if (id != tab_hotkey_ids[i]) {
 				continue;
 			}
 
@@ -977,7 +1028,7 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 			return;
 		}
 
-		std::unique_ptr<Site> pData = CSiteManager::GetSiteById(event.GetId());
+		std::unique_ptr<Site> pData = CSiteManager::GetSiteById(id);
 
 		if (!pData) {
 			event.Skip();
@@ -1088,7 +1139,7 @@ void CMainFrame::OnEngineEvent(CFileZillaEngine* engine)
 
 bool CMainFrame::CreateMainToolBar()
 {
-	wxGetApp().AddStartupProfileRecord("CMainFrame::CreateMainToolBar");
+	wxGetApp().AddStartupProfileRecord("CMainFrame::CreateMainToolBar"sv);
 	if (m_pToolBar) {
 #ifdef __WXMAC__
 		if (m_pToolBar) {
@@ -1258,7 +1309,7 @@ void CMainFrame::OnClose(wxCloseEvent &event)
 			quit_confirmation_displayed = true;
 
 			if (m_pQueueView && m_pQueueView->IsActive()) {
-				CConditionalDialog dlg(this, CConditionalDialog::confirmexit, CConditionalDialog::yesno);
+				CConditionalDialog dlg(this, CConditionalDialog::confirmexit, CConditionalDialog::yesno, options_);
 				dlg.SetTitle(_("Close FileZilla"));
 
 				dlg.AddText(_("File transfers still in progress."));
@@ -1280,7 +1331,7 @@ void CMainFrame::OnClose(wxCloseEvent &event)
 					pEditHandler->GetFileCount(CEditHandler::none, CEditHandler::upload_and_remove) ||
 					pEditHandler->GetFileCount(CEditHandler::none, CEditHandler::upload_and_remove_failed))
 				{
-					CConditionalDialog dlg(this, CConditionalDialog::confirmexit_edit, CConditionalDialog::yesno);
+					CConditionalDialog dlg(this, CConditionalDialog::confirmexit_edit, CConditionalDialog::yesno, options_);
 					dlg.SetTitle(_("Close FileZilla"));
 
 					dlg.AddText(_("Some files are still being edited or need to be uploaded."));
@@ -1382,6 +1433,12 @@ void CMainFrame::OnClose(wxCloseEvent &event)
 
 	for (std::vector<CState*>::const_iterator iter = pStates->begin(); iter != pStates->end(); ++iter) {
 		CState *pState = *iter;
+		if (!pState) {
+			continue;
+		}
+		if (async_request_queue_) {
+			async_request_queue_->ClearPending(pState->engine_.get());
+		}
 		pState->DestroyEngine();
 	}
 
@@ -1545,7 +1602,7 @@ void CMainFrame::OnProcessQueue(wxCommandEvent& event)
 
 void CMainFrame::OnMenuEditSettings(wxCommandEvent&)
 {
-	CSettingsDialog dlg(m_engineContext);
+	CSettingsDialog dlg(options_, m_engineContext);
 	if (!dlg.Create(this)) {
 		return;
 	}
@@ -1762,7 +1819,7 @@ void CMainFrame::OnCheckForUpdates(wxCommandEvent& event)
 	}
 
 	update_dialog_timer_.Stop();
-	CUpdateDialog dlg(this, *m_pUpdater);
+	CUpdateDialog dlg(this, *m_pUpdater, options_);
 	dlg.ShowModal();
 	update_dialog_timer_.Stop();
 }
@@ -1822,12 +1879,12 @@ void CMainFrame::TriggerUpdateDialog()
 		return;
 	}
 
-	if (!wxDialogEx::CanShowPopupDialog()) {
+	if (!wxDialogEx::CanShowPopupDialog(this)) {
 		update_dialog_timer_.Start(1000, true);
 		return;
 	}
 
-	CUpdateDialog dlg(this, *m_pUpdater);
+	CUpdateDialog dlg(this, *m_pUpdater, options_);
 	dlg.ShowModal();
 
 	// In case the timer was started while the dialog was up.
@@ -2109,7 +2166,9 @@ bool CMainFrame::ConnectToSite(Site & data, Bookmark const& bookmark, CState* pS
 
 void CMainFrame::CheckChangedSettings()
 {
-	async_request_queue_->RecheckDefaults();
+	if (async_request_queue_) {
+		async_request_queue_->RecheckDefaults();
+	}
 
 	CAutoAsciiFiles::SettingsChanged(options_);
 
@@ -2387,7 +2446,7 @@ void CMainFrame::OnToolbarComparison(wxCommandEvent&)
 		}
 
 		if ((controls->pLocalListSearchPanel && controls->pLocalListSearchPanel->IsShown()) || (controls->pRemoteListSearchPanel && controls->pRemoteListSearchPanel->IsShown())) {
-			CConditionalDialog dlg(this, CConditionalDialog::quick_search, CConditionalDialog::yesno);
+			CConditionalDialog dlg(this, CConditionalDialog::quick_search, CConditionalDialog::yesno, options_);
 			dlg.SetTitle(_("Directory comparison"));
 			dlg.AddText(_("To compare directories quick search must be closed."));
 			dlg.AddText(_("Close quick search and continue comparing?"));
@@ -2407,7 +2466,7 @@ void CMainFrame::OnToolbarComparison(wxCommandEvent&)
 		if ((controls->pLocalSplitter->IsSplit() && !controls->pRemoteSplitter->IsSplit()) ||
 			(!controls->pLocalSplitter->IsSplit() && controls->pRemoteSplitter->IsSplit()))
 		{
-			CConditionalDialog dlg(this, CConditionalDialog::compare_treeviewmismatch, CConditionalDialog::yesno);
+			CConditionalDialog dlg(this, CConditionalDialog::compare_treeviewmismatch, CConditionalDialog::yesno, options_);
 			dlg.SetTitle(_("Directory comparison"));
 			dlg.AddText(_("To compare directories, both file lists have to be aligned."));
 			dlg.AddText(_("To do this, the directory trees need to be both shown or both hidden."));
@@ -2559,7 +2618,7 @@ void CMainFrame::ProcessCommandLine()
 		}
 	}
 	else if (!(site = pCommandLine->GetOption(CCommandLine::site)).empty()) {
-		auto const data = CSiteManager::GetSiteByPath(site);
+		auto const data = CSiteManager::GetSiteByPath(options_, site);
 
 		if (data.first) {
 			ConnectToSite(*data.first, data.second);
@@ -2780,7 +2839,7 @@ void CMainFrame::PostInitialize()
 	bool startupReconnect = startupAction == 2;
 
 	if (startupAction == 1) {
-		if (wxDialogEx::CanShowPopupDialog()) {
+		if (wxDialogEx::CanShowPopupDialog(this)) {
 			OpenSiteManager();
 		}
 		startupReconnect = false;
@@ -2880,6 +2939,7 @@ void CMainFrame::SetupKeyboardAccelerators()
 #ifdef __WXMAC__
 	entries.emplace_back(wxACCEL_CMD, ',', XRCID("wxID_PREFERENCES"));
 
+#if !wxCHECK_VERSION(3, 2,1)
 	keyboardCommands[wxNewId()] = std::make_pair([](wxTextEntry* e) { e->Cut(); }, 'X');
 	keyboardCommands[wxNewId()] = std::make_pair([](wxTextEntry* e) { e->Copy(); }, 'C');
 	keyboardCommands[wxNewId()] = std::make_pair([](wxTextEntry* e) { e->Paste(); }, 'V');
@@ -2888,6 +2948,7 @@ void CMainFrame::SetupKeyboardAccelerators()
 	for (auto const& command : keyboardCommands) {
 		entries.emplace_back(wxACCEL_CMD, command.second.second, command.first);
 	}
+#endif
 
 	// Ctrl+(Shift+)Tab to switch between tabs
 	int id = wxNewId();

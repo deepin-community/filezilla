@@ -33,7 +33,7 @@ public:
 	bool Load(std::wstring const& theme);
 	bool Load(std::wstring const& theme, std::vector<wxSize> sizes);
 
-	wxBitmap const& LoadBitmap(CLocalPath const& cacheDir, std::wstring const& name, wxSize const& size);
+	wxBitmap const& LoadBitmap(CLocalPath const& cacheDir, std::wstring const& name, wxSize const& size, bool allowContentScale = true);
 	wxAnimation LoadAnimation(std::wstring const& name, wxSize const& size);
 
 	static wxSize StringToSize(std::wstring const&);
@@ -45,16 +45,23 @@ public:
 
 	std::vector<wxBitmap> GetAllImages(CLocalPath const& cacheDir, wxSize const& size);
 private:
+	typedef std::map<wxSize, wxBitmap, wxSize_cmp> BmpCache;
 	struct cacheEntry
 	{
+		bool empty() const;
+
 		// Converting from wxImage to wxBitmap to wxImage is quite slow, so cache the images as well.
-		std::map<wxSize, wxBitmap, wxSize_cmp> bitmaps_;
+		BmpCache bitmaps_;
 		std::map<wxSize, wxImage, wxSize_cmp> images_;
+#ifdef __WXMAC__
+		BmpCache contentScaledBitmaps_;
+#endif
+		BmpCache& getBmpCache(bool allowContentScale);
 	};
 
-	wxBitmap const& DoLoadBitmap(CLocalPath const& cacheDir, std::wstring const& name, wxSize const& size, cacheEntry & cache);
+	wxBitmap const& DoLoadBitmap(CLocalPath const& cacheDir, std::wstring const& name, wxSize const& size, cacheEntry & cache, bool allowContentScale);
 
-	wxBitmap const& LoadBitmapWithSpecificSizeAndScale(CLocalPath const& cacheDir, std::wstring const& name, wxSize const& size, wxSize const& scale, cacheEntry & cache);
+	wxBitmap const& LoadBitmapWithSpecificSizeAndScale(CLocalPath const& cacheDir, std::wstring const& name, wxSize const& size, wxSize const& scale, cacheEntry & cache, bool allowContentScale);
 
 	wxImage const& LoadImageWithSpecificSize(std::wstring const& file, wxSize const& size, cacheEntry & cache);
 
@@ -98,15 +105,54 @@ public:
 	}
 	wxBitmap CreateBitmap(wxArtID const& id, wxArtClient const& client, wxSize const& size, bool allowDummy);
 
+	wxStaticBitmap* createStaticBitmap(wxWindow* parent, std::wstring const& name, iconSize s);
+
 private:
 	wxBitmap const& GetEmpty(wxSize const& size);
 
-	virtual void OnOptionsChanged(watched_options const& options);
+	virtual void OnOptionsChanged(watched_options const& options) override;
 
 	COptions& options_;
 	CLocalPath cacheDir_;
 	std::map<std::wstring, CTheme> themes_;
 	std::map<wxSize, wxBitmap, wxSize_cmp> emptyBitmaps_;
 };
+
+#if !defined __WXMSW__ || !wxCHECK_VERSION(3, 2, 1)
+#define MakeBmpBundle(x) x
+#else
+
+class ProperlyScaledBitmapBundle final : public wxBitmapBundleImpl
+{
+public:
+	ProperlyScaledBitmapBundle(wxBitmap const& bmp, double scale)
+		: bmp_(bmp)
+		, scale_(scale)
+	{
+	}
+
+	wxSize GetDefaultSize() const override { return bmp_.GetSize() / scale_; }
+	wxSize GetPreferredBitmapSizeAtScale(double scale) const override {
+		return GetDefaultSize() * scale;
+	}
+
+	wxBitmap GetBitmap(const wxSize& size) override {
+		if (size != bmp_.GetSize()) {
+			wxImage img = bmp_.ConvertToImage();
+			img.Rescale(size.x, size.y, wxIMAGE_QUALITY_HIGH);
+			return wxBitmap(img);
+		}
+		return bmp_;
+	}
+
+private:
+	wxBitmap bmp_;
+	double scale_;
+};
+
+inline wxBitmapBundle MakeBmpBundle(wxBitmap const& bmp) {
+	return wxBitmapBundle::FromImpl(new ProperlyScaledBitmapBundle(bmp, CThemeProvider::GetUIScaleFactor()));
+}
+#endif
 
 #endif

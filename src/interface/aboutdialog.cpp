@@ -27,7 +27,7 @@ bool CAboutDialog::Create(wxWindow* parent)
 	auto top = lay.createFlex(2);
 	main->Add(top);
 
-	top->Add(new wxStaticBitmap(this, -1, CThemeProvider::Get()->CreateBitmap("ART_FILEZILLA", wxString(), CThemeProvider::Get()->GetIconSize(iconSizeLarge))), 0, wxALL, lay.border);
+	top->Add(CThemeProvider::Get()->createStaticBitmap(this, L"ART_FILEZILLA", iconSizeLarge), 0, wxALL, lay.border);
 
 	auto topRight = lay.createFlex(1);
 	top->Add(topRight);
@@ -37,7 +37,7 @@ bool CAboutDialog::Create(wxWindow* parent)
 		version += L"-nightly";
 	}
 	topRight->Add(new wxStaticText(this, -1, version));
-	topRight->Add(new wxStaticText(this, -1, L"Copyright (C) 2004-2021  Tim Kosse"));
+	topRight->Add(new wxStaticText(this, -1, L"Copyright (C) 2004-2023  Tim Kosse"));
 
 	auto homepage = lay.createFlex(2);
 	homepage->Add(new wxStaticText(this, -1, _("Homepage:")), lay.valign);

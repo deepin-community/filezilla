@@ -80,15 +80,15 @@ bool COptionsPageFtpProxy::CreateControls(wxWindow* parent)
 		flex = lay.createFlex(4);
 		inner->Add(flex);
 		flex->Add(new wxStaticText(box, nullID, _("P&roxy host:")), lay.valign);
-		impl_->host_ = new wxTextCtrlEx(box, nullID);
+		impl_->host_ = new wxTextCtrlEx(box, nullID, wxString(), wxDefaultPosition, lay.defTextCtrlSize);
 		flex->Add(impl_->host_, lay.valign);
 		flex->Add(new wxStaticText(box, nullID, _("Proxy &user:")), lay.valign);
-		impl_->user_ = new wxTextCtrlEx(box, nullID);
+		impl_->user_ = new wxTextCtrlEx(box, nullID, wxString(), wxDefaultPosition, lay.defTextCtrlSize);
 		flex->Add(impl_->user_, lay.valign);
 		flex->Add(new wxStaticText(box, nullID, _("Pro&xy password:")), lay.valign);
-		impl_->pass_ = new wxTextCtrlEx(box, nullID);
+		impl_->pass_ = new wxTextCtrlEx(box, nullID, wxString(), wxDefaultPosition, lay.defTextCtrlSize);
 		flex->Add(impl_->pass_, lay.valign);
-		inner->Add(new wxStaticText(box, nullID, _("Note: This only works with plain, unencrytped FTP connections.")));
+		inner->Add(new wxStaticText(box, nullID, _("Note: This only works with plain, unencrypted FTP connections.")));
 
 		impl_->none_->Bind(wxEVT_RADIOBUTTON, &COptionsPageFtpProxy::OnProxyTypeChanged, this);
 		impl_->userhost_->Bind(wxEVT_RADIOBUTTON, &COptionsPageFtpProxy::OnProxyTypeChanged, this);

@@ -4,6 +4,7 @@
 #include "context_control.h"
 #include "filelist_statusbar.h"
 #include "filezillaapp.h"
+#include "graphics.h"
 #include "list_search_panel.h"
 #include "local_recursive_operation.h"
 #include "LocalListView.h"
@@ -29,6 +30,8 @@
 #include <wx/wupdlock.h>
 
 #include <array>
+
+using namespace std::literals;
 
 wxDECLARE_EVENT(fzEVT_TAB_CLOSING_DEFERRED, wxCommandEvent);
 wxDEFINE_EVENT(fzEVT_TAB_CLOSING_DEFERRED, wxCommandEvent);
@@ -76,7 +79,7 @@ bool CContextControl::CreateTab()
 
 bool CContextControl::CreateTab(CLocalPath const& localPath, Site const& site, CServerPath const& remotePath)
 {
-	wxGetApp().AddStartupProfileRecord("CContextControl::CreateTab");
+	wxGetApp().AddStartupProfileRecord("CContextControl::CreateTab"sv);
 
 	if (GetTabCount() >= 200) {
 		wxBell();
@@ -152,7 +155,7 @@ bool CContextControl::CreateTab(CLocalPath const& localPath, Site const& site, C
 
 void CContextControl::CreateContextControls(CState& state)
 {
-	wxGetApp().AddStartupProfileRecord("CContextControl::CreateContextControls");
+	wxGetApp().AddStartupProfileRecord("CContextControl::CreateContextControls"sv);
 	wxWindow* parent = this;
 
 #ifdef __WXGTK__
@@ -233,21 +236,21 @@ void CContextControl::CreateContextControls(CState& state)
 
 	context_controls.pLocalTreeViewPanel = new CView(context_controls.pLocalSplitter);
 	context_controls.pLocalListViewPanel = new CView(context_controls.pLocalSplitter);
-	context_controls.pLocalTreeView = new CLocalTreeView(context_controls.pLocalTreeViewPanel, -1, state, m_mainFrame.GetQueue());
+	context_controls.pLocalTreeView = new CLocalTreeView(context_controls.pLocalTreeViewPanel, -1, state, m_mainFrame.GetQueue(), m_mainFrame.GetOptions());
 	context_controls.pLocalListView = new CLocalListView(context_controls.pLocalListViewPanel, state, m_mainFrame.GetQueue(), m_mainFrame.GetOptions());
 	context_controls.pLocalTreeViewPanel->SetWindow(context_controls.pLocalTreeView);
 	context_controls.pLocalListViewPanel->SetWindow(context_controls.pLocalListView);
 
 	context_controls.pRemoteTreeViewPanel = new CView(context_controls.pRemoteSplitter);
 	context_controls.pRemoteListViewPanel = new CView(context_controls.pRemoteSplitter);
-	context_controls.pRemoteTreeView = new CRemoteTreeView(context_controls.pRemoteTreeViewPanel, -1, state, m_mainFrame.GetQueue());
+	context_controls.pRemoteTreeView = new CRemoteTreeView(context_controls.pRemoteTreeViewPanel, -1, state, m_mainFrame.GetQueue(), m_mainFrame.GetOptions());
 	context_controls.pRemoteListView = new CRemoteListView(context_controls.pRemoteListViewPanel, state, m_mainFrame.GetQueue(), m_mainFrame.GetOptions());
 	context_controls.pRemoteTreeViewPanel->SetWindow(context_controls.pRemoteTreeView);
 	context_controls.pRemoteListViewPanel->SetWindow(context_controls.pRemoteListView);
 
 	bool show_filelist_statusbars = m_mainFrame.GetOptions().get_int(OPTION_FILELIST_STATUSBAR) != 0;
 
-	CFilelistStatusBar* pLocalFilelistStatusBar = new CFilelistStatusBar(context_controls.pLocalListViewPanel);
+	CFilelistStatusBar* pLocalFilelistStatusBar = new CFilelistStatusBar(context_controls.pLocalListViewPanel, m_mainFrame.GetOptions());
 	if (!show_filelist_statusbars) {
 		pLocalFilelistStatusBar->Hide();
 	}
@@ -257,7 +260,7 @@ void CContextControl::CreateContextControls(CState& state)
 	}
 	pLocalFilelistStatusBar->SetConnected(true);
 
-	CFilelistStatusBar* pRemoteFilelistStatusBar = new CFilelistStatusBar(context_controls.pRemoteListViewPanel);
+	CFilelistStatusBar* pRemoteFilelistStatusBar = new CFilelistStatusBar(context_controls.pRemoteListViewPanel, m_mainFrame.GetOptions());
 	if (!show_filelist_statusbars) {
 		pRemoteFilelistStatusBar->Hide();
 	}
@@ -752,7 +755,7 @@ void CContextControl::RestoreTabs()
 
 				std::unique_ptr<Site> ssite;
 				if (!last_site_path.empty()) {
-					auto ssite = CSiteManager::GetSiteByPath(last_site_path, false).first;
+					auto ssite = CSiteManager::GetSiteByPath(m_mainFrame.GetOptions(), last_site_path, false).first;
 					if (ssite && ssite->SameResource(site)) {
 						site = *ssite;
 					}

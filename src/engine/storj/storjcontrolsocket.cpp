@@ -29,7 +29,7 @@
 #endif
 
 CStorjControlSocket::CStorjControlSocket(CFileZillaEnginePrivate & engine)
-	: CControlSocket(engine)
+    : CControlSocket(engine, true)
 {
 	m_useUTF8 = true;
 }
@@ -40,7 +40,7 @@ CStorjControlSocket::~CStorjControlSocket()
 	DoClose();
 }
 
-void CStorjControlSocket::Connect(CServer const &server, Credentials const& credentials)
+void CStorjControlSocket::Connect(CServer const& server, Credentials const& credentials)
 {
 	currentServer_ = server;
 	credentials_ = credentials;
@@ -70,7 +70,7 @@ void CStorjControlSocket::Delete(CServerPath const& path, std::vector<std::wstri
 	Push(std::make_unique<CStorjDeleteOpData>(*this, path, std::move(files)));
 }
 
-void CStorjControlSocket::Mkdir(CServerPath const& path)
+void CStorjControlSocket::Mkdir(CServerPath const& path, transfer_flags const&)
 {
 	auto pData = std::make_unique<CStorjMkdirOpData>(*this);
 	pData->path_ = path;
@@ -336,26 +336,16 @@ int CStorjControlSocket::DoClose(int nErrorCode)
 	if (input_thread_) {
 		input_thread_.reset();
 
-		auto threadEventsFilter = [&](fz::event_loop::Events::value_type const& ev) -> bool {
-			if (ev.first != this) {
-				return false;
-			}
-			else if (ev.second->derived_type() == CStorjEvent::type() || ev.second->derived_type() == StorjTerminateEvent::type()) {
+		auto threadEventsFilter = [](fz::event_base const& ev) -> bool {
+			if (ev.derived_type() == CStorjEvent::type() || ev.derived_type() == StorjTerminateEvent::type()) {
 				return true;
 			}
 			return false;
 		};
 
-		event_loop_.filter_events(threadEventsFilter);
+		filter_events(threadEventsFilter);
 	}
 	process_.reset();
-
-#ifndef FZ_WINDOWS
-	if (shm_fd_ != -1) {
-		close(shm_fd_);
-		shm_fd_ = -1;
-	}
-#endif
 
 	return CControlSocket::DoClose(nErrorCode);
 }

@@ -1,4 +1,5 @@
 #include "filezilla.h"
+#include "filezillaapp.h"
 #include "filter_manager.h"
 #include "listingcomparison.h"
 #include "Mainfrm.h"
@@ -9,7 +10,7 @@
 
 namespace {
 	constexpr int toolbarStyle = wxTB_FLAT | wxTB_HORIZONTAL | wxTB_NODIVIDER
-#ifdef __WXMSW__
+#if defined(__WXMSW__) && !wxCHECK_VERSION(3, 2, 1)
 		| wxTB_NOICONS
 #endif
 		;
@@ -25,20 +26,20 @@ CToolBar::CToolBar(CMainFrame& mainFrame, COptions& options)
 	, mainFrame_(mainFrame)
 	, options_(options)
 {
-	iconSize_ = CThemeProvider::GetIconSize(iconSizeSmall, true);
 #ifdef __WXMAC__
 	fix_toolbar_style(mainFrame_);
 
-	// OS X only knows two hardcoded toolbar sizes.
-	if (iconSize_.x >= 32) {
-		iconSize_ = wxSize(32, 32);
+	// These days, OS X only knows one hardcoded toolbar size
+	iconSize_ = wxSize(32, 32);
+	if (wxGetApp().GetTopWindow()) {
+                double scale = wxGetApp().GetTopWindow()->GetContentScaleFactor();
+                iconSize_.Scale(scale, scale);
 	}
-	else {
-		iconSize_ = wxSize(24, 24);
-	}
+#else
+	iconSize_ = CThemeProvider::GetIconSize(iconSizeSmall, true);
+	SetToolBitmapSize(iconSize_);
 #endif
 
-	SetToolBitmapSize(iconSize_);
 	MakeTools();
 
 	CContextManager::Get()->RegisterHandler(this, STATECHANGE_REMOTE_IDLE, true);
@@ -120,8 +121,6 @@ void CToolBar::MakeTools()
 #ifdef __WXMSW__
 bool CToolBar::Realize()
 {
-	wxASSERT(HasFlag(wxTB_NOICONS));
-
 	bool ret = wxToolBar::Realize();
 	if (!ret) {
 		return false;
@@ -312,3 +311,11 @@ bool CToolBar::HideTool(int id)
 
 	return true;
 }
+
+#if defined(__WXMSW__) && wxCHECK_VERSION(3, 2, 1)
+void CToolBar::DoSetToolBitmapSize(wxSize const&)
+{
+	// wx internally taints the sizes. Ignore the passed size and pass along out own, proper size.
+	wxToolBar::DoSetToolBitmapSize(iconSize_);
+}
+#endif

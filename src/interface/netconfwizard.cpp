@@ -13,6 +13,7 @@
 #include "filezillaapp.h"
 #include "netconfwizard.h"
 #include "Options.h"
+#include "textctrlex.h"
 #include "xrc_helper.h"
 
 wxDECLARE_EVENT(fzEVT_ON_EXTERNAL_IP_ADDRESS, wxCommandEvent);
@@ -33,10 +34,10 @@ fztranslate_mark("&Next >");
 fztranslate_mark("< &Back");
 #endif
 
-CNetConfWizard::CNetConfWizard(wxWindow* parent, COptions* pOptions, CFileZillaEngineContext & engine_context)
+CNetConfWizard::CNetConfWizard(wxWindow* parent, CFileZillaEngineContext & engine_context)
 	: fz::event_handler(engine_context.GetEventLoop())
 	, engine_context_(engine_context)
-	, m_parent(parent), m_pOptions(pOptions)
+	, m_parent(parent)
 {
 	m_timer.SetOwner(this);
 
@@ -53,6 +54,68 @@ CNetConfWizard::~CNetConfWizard()
 	data_socket_.reset();
 }
 
+bool CNetConfWizard::CreatePages()
+{
+	DialogLayout lay(this);
+
+	InitXrc(L"netconfwizard.xrc");
+	for (int i = 1; i <= 7; ++i) {
+		wxWizardPageSimple* page = new wxWizardPageSimple();
+		if (i == 4) {
+			page->Create(this);
+			auto main = lay.createMain(page, 1);
+			main->Add(new wxStaticText(page, nullID, _("In order to use active mode, FileZilla needs to know your external IP address.")));
+
+			main->Add(new wxRadioButton(page, XRCID("ID_ACTIVEMODE1"), _("Ask your operating system for the external IP address"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP));
+			main->Add(new wxStaticText(page, nullID, _("This only works if you are not behind a router, else your system would just return your internal address.")), 0, wxLEFT, lay.indent);
+
+			main->Add(new wxRadioButton(page, XRCID("ID_ACTIVEMODE2"), _("Use the following IP address:")));
+			main->Add(new wxTextCtrl(page, XRCID("ID_ACTIVEIP"), wxString(), wxDefaultPosition, wxSize(lay.dlgUnits(60), -1)), 0, wxLEFT, lay.indent);
+			main->Add(new wxStaticText(page, nullID, _("Use this if you're behind a router and have a static external IP address.")), 0, wxLEFT, lay.indent);
+
+			main->Add(new wxRadioButton(page, XRCID("ID_ACTIVEMODE3"), _("Get external IP address from the following URL:")));
+			main->Add(new wxTextCtrl(page, XRCID("ID_ACTIVERESOLVER")), 0, wxLEFT|wxGROW, lay.indent);
+			main->Add(new wxStaticText(page, nullID, _("Default: http://ip.filezilla-project.org/ip.php")), 0, wxLEFT, lay.indent);
+			main->Add(new wxStaticText(page, nullID, _("Use this option if you have a dynamic IP address. FileZilla will contact the above server once each session as soon as you use active mode for the first time. Only the version of FileZilla you're using is submitted to the server.")), 0, wxLEFT, lay.indent);
+
+			main->Add(new wxCheckBox(page, XRCID("ID_NOEXTERNALONLOCAL"), _("Don't use external IP address on &local connections.")));
+		}
+		else if (i == 5) {
+			page->Create(this);
+			auto main = lay.createMain(page, 1);
+			main->Add(new wxStaticText(page, nullID, _("Configure port range")));
+			main->Add(new wxStaticText(page, nullID, _("In active mode, FileZilla has to listen on a port for data transfers. You have to specify which ports FileZilla will use.")));
+
+			main->Add(new wxRadioButton(page, XRCID("ID_ACTIVE_PORTMODE1"), _("Ask operating system for a port."), wxDefaultPosition, wxDefaultSize, wxRB_GROUP));
+			main->Add(new wxStaticText(page, nullID, _("In case you have a router, you will have to forward all available ports, as FileZilla has no influence on the ports your system chooses.")), 0, wxLEFT, lay.indent);
+
+			main->Add(new wxRadioButton(page, XRCID("ID_ACTIVE_PORTMODE2"), _("Use the following port range:")));
+			auto inner = lay.createFlex(3);
+			main->Add(inner, 0, wxLEFT, lay.indent);
+			inner->Add(new wxTextCtrl(page, XRCID("ID_ACTIVE_PORTMIN"), wxString(), wxDefaultPosition, lay.defTextCtrlSize), lay.valign);
+			inner->Add(new wxStaticText(page, nullID, L"-"), lay.valign);
+			inner->Add(new wxTextCtrl(page, XRCID("ID_ACTIVE_PORTMAX"), wxString(), wxDefaultPosition, lay.defTextCtrlSize), lay.valign);
+			main->Add(new wxStaticText(page, nullID, _("All ports in the given range have to be between 1024 and 65535.")), 0, wxLEFT, lay.indent);
+			main->Add(new wxStaticText(page, nullID, _("For reliability you should specify a range of at least 10 ports.")), 0, wxLEFT, lay.indent);
+			main->Add(new wxStaticText(page, nullID, _("If you use a router, make sure all these ports are forwarded to the machine you're running FileZilla on.")), 0, wxLEFT, lay.indent);
+			main->Add(new wxStaticText(page, nullID, _("If you use a firewall, make sure FileZilla is allowed to accept connection on all given ports.")), 0, wxLEFT, lay.indent);
+		}
+		else {
+			bool res = wxXmlResource::Get()->LoadPanel(page, this, wxString::Format(_T("NETCONF_PANEL%d"), i));
+			if (!res) {
+				return false;
+			}
+		}
+		page->Show(false);
+
+		m_pages.push_back(page);
+	}
+	for (unsigned int i = 0; i < (m_pages.size() - 1); ++i) {
+		m_pages[i]->Chain(m_pages[i], m_pages[i + 1]);
+	}
+	return true;
+}
+
 bool CNetConfWizard::Load()
 {
 	if (!Create(m_parent, wxID_ANY, _("Firewall and router configuration wizard"), wxNullBitmap, wxPoint(0, 0))) {
@@ -61,19 +124,8 @@ bool CNetConfWizard::Load()
 
 	wxSize minPageSize = GetPageAreaSizer()->GetMinSize();
 
-	InitXrc(L"netconfwizard.xrc");
-	for (int i = 1; i <= 7; ++i) {
-		wxWizardPageSimple* page = new wxWizardPageSimple();
-		bool res = wxXmlResource::Get()->LoadPanel(page, this, wxString::Format(_T("NETCONF_PANEL%d"), i));
-		if (!res) {
-			return false;
-		}
-		page->Show(false);
-
-		m_pages.push_back(page);
-	}
-	for (unsigned int i = 0; i < (m_pages.size() - 1); ++i) {
-		m_pages[i]->Chain(m_pages[i], m_pages[i + 1]);
+	if (!CreatePages()) {
+		return false;
 	}
 
 	GetPageAreaSizer()->Add(m_pages[0]);
@@ -88,7 +140,7 @@ bool CNetConfWizard::Load()
 
 	// Load values
 
-	switch (m_pOptions->get_int(OPTION_USEPASV))
+	switch (engine_context_.GetOptions().get_int(OPTION_USEPASV))
 	{
 	default:
 	case 1:
@@ -99,9 +151,9 @@ bool CNetConfWizard::Load()
 		break;
 	}
 
-	XRCCTRL(*this, "ID_FALLBACK", wxCheckBox)->SetValue(m_pOptions->get_int(OPTION_ALLOW_TRANSFERMODEFALLBACK) != 0);
+	XRCCTRL(*this, "ID_FALLBACK", wxCheckBox)->SetValue(engine_context_.GetOptions().get_int(OPTION_ALLOW_TRANSFERMODEFALLBACK) != 0);
 
-	switch (m_pOptions->get_int(OPTION_PASVREPLYFALLBACKMODE))
+	switch (engine_context_.GetOptions().get_int(OPTION_PASVREPLYFALLBACKMODE))
 	{
 	default:
 	case 0:
@@ -111,7 +163,7 @@ bool CNetConfWizard::Load()
 		XRCCTRL(*this, "ID_PASSIVE_FALLBACK2", wxRadioButton)->SetValue(true);
 		break;
 	}
-	switch (m_pOptions->get_int(OPTION_EXTERNALIPMODE))
+	switch (engine_context_.GetOptions().get_int(OPTION_EXTERNALIPMODE))
 	{
 	default:
 	case 0:
@@ -124,7 +176,7 @@ bool CNetConfWizard::Load()
 		XRCCTRL(*this, "ID_ACTIVEMODE3", wxRadioButton)->SetValue(true);
 		break;
 	}
-	switch (m_pOptions->get_int(OPTION_LIMITPORTS))
+	switch (engine_context_.GetOptions().get_int(OPTION_LIMITPORTS))
 	{
 	default:
 	case 0:
@@ -134,11 +186,11 @@ bool CNetConfWizard::Load()
 		XRCCTRL(*this, "ID_ACTIVE_PORTMODE2", wxRadioButton)->SetValue(true);
 		break;
 	}
-	XRCCTRL(*this, "ID_ACTIVE_PORTMIN", wxTextCtrl)->SetValue(wxString::Format(_T("%d"), m_pOptions->get_int(OPTION_LIMITPORTS_LOW)));
-	XRCCTRL(*this, "ID_ACTIVE_PORTMAX", wxTextCtrl)->SetValue(wxString::Format(_T("%d"), m_pOptions->get_int(OPTION_LIMITPORTS_HIGH)));
-	XRCCTRL(*this, "ID_ACTIVEIP", wxTextCtrl)->SetValue(m_pOptions->get_string(OPTION_EXTERNALIP));
-	XRCCTRL(*this, "ID_ACTIVERESOLVER", wxTextCtrl)->SetValue(m_pOptions->get_string(OPTION_EXTERNALIPRESOLVER));
-	XRCCTRL(*this, "ID_NOEXTERNALONLOCAL", wxCheckBox)->SetValue(m_pOptions->get_int(OPTION_NOEXTERNALONLOCAL) != 0);
+	XRCCTRL(*this, "ID_ACTIVE_PORTMIN", wxTextCtrl)->SetValue(wxString::Format(_T("%d"), engine_context_.GetOptions().get_int(OPTION_LIMITPORTS_LOW)));
+	XRCCTRL(*this, "ID_ACTIVE_PORTMAX", wxTextCtrl)->SetValue(wxString::Format(_T("%d"), engine_context_.GetOptions().get_int(OPTION_LIMITPORTS_HIGH)));
+	XRCCTRL(*this, "ID_ACTIVEIP", wxTextCtrl)->SetValue(engine_context_.GetOptions().get_string(OPTION_EXTERNALIP));
+	XRCCTRL(*this, "ID_ACTIVERESOLVER", wxTextCtrl)->SetValue(engine_context_.GetOptions().get_string(OPTION_EXTERNALIPRESOLVER));
+	XRCCTRL(*this, "ID_NOEXTERNALONLOCAL", wxCheckBox)->SetValue(engine_context_.GetOptions().get_int(OPTION_NOEXTERNALONLOCAL) != 0);
 
 	return true;
 }
@@ -711,15 +763,13 @@ std::wstring CNetConfWizard::GetExternalIPAddress()
 			PrintMessage(fz::sprintf(fztranslate("Retrieving external IP address from %s"), address), 0);
 
 			m_pIPResolver = new CExternalIPResolver(engine_context_.GetThreadPool(), *this);
-			m_pIPResolver->GetExternalIP(address, fz::address_type::ipv4, true);
-			if (!m_pIPResolver->Done()) {
-				return ret;
+			auto res = m_pIPResolver->GetExternalIP(address, fz::address_type::ipv4, true);
+			if (res == fz::http::continuation::wait) {
+				return {};
 			}
 		}
-		if (m_pIPResolver->Successful()) {
-			ret = fz::to_wstring_from_utf8(m_pIPResolver->GetIP());
-		}
-		else {
+		ret = fz::to_wstring_from_utf8(m_pIPResolver->GetIP());
+		if (ret.empty()) {
 			PrintMessage(fztranslate("Failed to retrieve external IP address, aborting."), 1);
 
 			m_testResult = externalfailed;
@@ -739,10 +789,6 @@ void CNetConfWizard::OnExternalIPAddress2(wxCommandEvent&)
 	}
 
 	if (m_state != 3) {
-		return;
-	}
-
-	if (!m_pIPResolver->Done()) {
 		return;
 	}
 
@@ -859,27 +905,27 @@ void CNetConfWizard::OnFinish(wxWizardEvent&)
 		}
 	}
 
-	m_pOptions->set(OPTION_USEPASV, XRCCTRL(*this, "ID_PASSIVE", wxRadioButton)->GetValue() ? 1 : 0);
-	m_pOptions->set(OPTION_ALLOW_TRANSFERMODEFALLBACK, XRCCTRL(*this, "ID_FALLBACK", wxCheckBox)->GetValue() ? 1 : 0);
+	engine_context_.GetOptions().set(OPTION_USEPASV, XRCCTRL(*this, "ID_PASSIVE", wxRadioButton)->GetValue() ? 1 : 0);
+	engine_context_.GetOptions().set(OPTION_ALLOW_TRANSFERMODEFALLBACK, XRCCTRL(*this, "ID_FALLBACK", wxCheckBox)->GetValue() ? 1 : 0);
 
-	m_pOptions->set(OPTION_PASVREPLYFALLBACKMODE, XRCCTRL(*this, "ID_PASSIVE_FALLBACK1", wxRadioButton)->GetValue() ? 0 : 1);
+	engine_context_.GetOptions().set(OPTION_PASVREPLYFALLBACKMODE, XRCCTRL(*this, "ID_PASSIVE_FALLBACK1", wxRadioButton)->GetValue() ? 0 : 1);
 
 	if (XRCCTRL(*this, "ID_ACTIVEMODE1", wxRadioButton)->GetValue()) {
-		m_pOptions->set(OPTION_EXTERNALIPMODE, 0);
+		engine_context_.GetOptions().set(OPTION_EXTERNALIPMODE, 0);
 	}
 	else {
-		m_pOptions->set(OPTION_EXTERNALIPMODE, XRCCTRL(*this, "ID_ACTIVEMODE2", wxRadioButton)->GetValue() ? 1 : 2);
+		engine_context_.GetOptions().set(OPTION_EXTERNALIPMODE, XRCCTRL(*this, "ID_ACTIVEMODE2", wxRadioButton)->GetValue() ? 1 : 2);
 	}
 
-	m_pOptions->set(OPTION_LIMITPORTS, XRCCTRL(*this, "ID_ACTIVE_PORTMODE1", wxRadioButton)->GetValue() ? 0 : 1);
+	engine_context_.GetOptions().set(OPTION_LIMITPORTS, XRCCTRL(*this, "ID_ACTIVE_PORTMODE1", wxRadioButton)->GetValue() ? 0 : 1);
 
 	long tmp;
-	XRCCTRL(*this, "ID_ACTIVE_PORTMIN", wxTextCtrl)->GetValue().ToLong(&tmp); m_pOptions->set(OPTION_LIMITPORTS_LOW, tmp);
-	XRCCTRL(*this, "ID_ACTIVE_PORTMAX", wxTextCtrl)->GetValue().ToLong(&tmp); m_pOptions->set(OPTION_LIMITPORTS_HIGH, tmp);
+	XRCCTRL(*this, "ID_ACTIVE_PORTMIN", wxTextCtrl)->GetValue().ToLong(&tmp); engine_context_.GetOptions().set(OPTION_LIMITPORTS_LOW, tmp);
+	XRCCTRL(*this, "ID_ACTIVE_PORTMAX", wxTextCtrl)->GetValue().ToLong(&tmp); engine_context_.GetOptions().set(OPTION_LIMITPORTS_HIGH, tmp);
 
-	m_pOptions->set(OPTION_EXTERNALIP, XRCCTRL(*this, "ID_ACTIVEIP", wxTextCtrl)->GetValue().ToStdWstring());
-	m_pOptions->set(OPTION_EXTERNALIPRESOLVER, XRCCTRL(*this, "ID_ACTIVERESOLVER", wxTextCtrl)->GetValue().ToStdWstring());
-	m_pOptions->set(OPTION_NOEXTERNALONLOCAL, XRCCTRL(*this, "ID_NOEXTERNALONLOCAL", wxCheckBox)->GetValue());
+	engine_context_.GetOptions().set(OPTION_EXTERNALIP, XRCCTRL(*this, "ID_ACTIVEIP", wxTextCtrl)->GetValue().ToStdWstring());
+	engine_context_.GetOptions().set(OPTION_EXTERNALIPRESOLVER, XRCCTRL(*this, "ID_ACTIVERESOLVER", wxTextCtrl)->GetValue().ToStdWstring());
+	engine_context_.GetOptions().set(OPTION_NOEXTERNALONLOCAL, XRCCTRL(*this, "ID_NOEXTERNALONLOCAL", wxCheckBox)->GetValue());
 }
 
 int CNetConfWizard::CreateListenSocket()

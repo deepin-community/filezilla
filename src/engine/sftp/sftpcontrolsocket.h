@@ -22,7 +22,7 @@ public:
 	virtual void FileTransfer(CFileTransferCommand const& cmd) override;
 	virtual void Delete(CServerPath const& path, std::vector<std::wstring>&& files) override;
 	virtual void RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring()) override;
-	virtual void Mkdir(CServerPath const& path) override;
+	virtual void Mkdir(CServerPath const& path, transfer_flags const& flags = {}) override;
 	virtual void Rename(CRenameCommand const& command) override;
 	virtual void Chmod(CChmodCommand const& command) override;
 	virtual void Cancel() override;
@@ -48,9 +48,6 @@ protected:
 	virtual void wakeup(fz::direction::type const d) override;
 	void OnQuotaRequest(fz::direction::type const d);
 
-#ifndef FZ_WINDOWS
-	int shm_fd_{-1};
-#endif
 	std::unique_ptr<fz::process> process_;
 	std::unique_ptr<SftpInputParser> input_parser_;
 
