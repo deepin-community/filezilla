@@ -1,5 +1,3 @@
 filezilla: link-to-shared-library-in-wrong-package usr/lib/*/libfzclient-*
 filezilla: package-name-doesnt-match-sonames libfzclient-*
 filezilla: no-symbols-control-file usr/lib/*/libfzclient-*
-filezilla: hardening-no-fortify-functions usr/lib/*/libfzclient-*
-filezilla: spelling-error-in-binary usr/lib/*/libfzclient-* LengH Length

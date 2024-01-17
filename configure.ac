@@ -1,4 +1,4 @@
-AC_INIT([FileZilla],[3.65.0], [tim.kosse@filezilla-project.org],[],[https://filezilla-project.org/])
+AC_INIT([FileZilla],[3.66.4], [tim.kosse@filezilla-project.org],[],[https://filezilla-project.org/])
 AC_CONFIG_HEADERS([config/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR(config)
@@ -153,7 +153,7 @@ if test "$buildmain" = "yes"; then
 
   # Find libfilezilla
   # -----------------
-  PKG_CHECK_MODULES(LIBFILEZILLA, [libfilezilla >= 0.44.0],, [
+  PKG_CHECK_MODULES(LIBFILEZILLA, [libfilezilla >= 0.45.0],, [
 	AC_MSG_ERROR([libfilezilla not found: $LIBFILEZILLA_PKG_ERRORS. You can download it from https://lib.filezilla-project.org/])
   ])
   AC_SUBST(LIBFILEZILLA_CFLAGS)
@@ -667,7 +667,11 @@ if test "$buildmain" = "yes"; then
       enable_storj="yes"
     ], [
       if test "$enable_storj" = "yes"; then
+if echo ${host} | grep "aarch64-apple" > /dev/null; then
+        enable_storj="no"
+else
   	AC_MSG_ERROR([libuplink not found: $LIBUPLINKC_PKG_ERRORS. You can download it from https://github.com/storj/uplink-c])
+fi
       else
         enable_storj="no"
       fi

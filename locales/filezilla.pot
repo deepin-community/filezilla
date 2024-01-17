@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: https://trac.filezilla-project.org/\n"
-"POT-Creation-Date: 2023-07-10 11:57+0200\n"
+"POT-Creation-Date: 2023-12-20 14:03+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -47,8 +47,8 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1421
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1279
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1681
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1305
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1707
 #, c-format
 msgid "%d directory with its contents"
 msgid_plural "%d directories with their contents"
@@ -58,8 +58,8 @@ msgstr[1] ""
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1420
 #: ../../../source/FileZilla3/locales/../src/interface/filelist_statusbar.cpp:58
 #: ../../../source/FileZilla3/locales/../src/interface/filelist_statusbar.cpp:83
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1278
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1680
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1304
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1706
 #, c-format
 msgid "%d file"
 msgid_plural "%d files"
@@ -473,7 +473,7 @@ msgstr ""
 msgid "&Download to:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1226
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1250
 msgid "&Download..."
 msgstr ""
 
@@ -536,7 +536,7 @@ msgid "&Export Site Manager entries"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/menu_bar.cpp:39
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1897
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1899
 msgid "&Export..."
 msgstr ""
 
@@ -622,7 +622,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/Mainfrm.cpp:2506
 #: ../../../source/FileZilla3/locales/../src/interface/menu_bar.cpp:76
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:695
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:697
 msgid "&Hide identical files"
 msgstr ""
 
@@ -689,7 +689,7 @@ msgstr ""
 msgid "&Local directory:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:654
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:656
 msgid "&Local search"
 msgstr ""
 
@@ -887,7 +887,7 @@ msgstr ""
 msgid "&Remote path:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:655
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:657
 msgid "&Remote search"
 msgstr ""
 
@@ -970,7 +970,7 @@ msgstr ""
 msgid "&Save as..."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:659
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:661
 msgid "&Search"
 msgstr ""
 
@@ -999,11 +999,11 @@ msgstr ""
 msgid "&Server"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1219
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1240
 msgid "&Set as local directory and close dialog"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1227
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1251
 msgid "&Set as remote directory and close dialog"
 msgstr ""
 
@@ -1110,7 +1110,7 @@ msgstr ""
 msgid "&Upload to:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1218
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1239
 msgid "&Upload..."
 msgstr ""
 
@@ -1172,7 +1172,7 @@ msgid "&View"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1056
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1228
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1252
 msgid "&View/Edit"
 msgstr ""
 
@@ -1675,7 +1675,7 @@ msgid ""
 "Some queue items might not have been saved."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1682
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1684
 msgid ""
 "An item with the same name as the dragged item already exists at the target "
 "location."
@@ -1865,19 +1865,19 @@ msgstr ""
 msgid "C&lear all"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:656
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:658
 msgid "C&omparative search"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1067
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteTreeView.cpp:911
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1235
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1260
 msgid "C&opy URL(s) to clipboard"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1068
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteTreeView.cpp:912
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1232
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1256
 msgid "C&opy URL(s) with password to clipboard"
 msgstr ""
 
@@ -1978,8 +1978,8 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/LocalListView.cpp:1940
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1111
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1337
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1624
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2068
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1650
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2114
 msgid "Cannot edit file"
 msgstr ""
 
@@ -2002,7 +2002,7 @@ msgid "Cannot load key file"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:779
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1007
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1008
 msgid "Cannot rename entry"
 msgstr ""
 
@@ -2136,12 +2136,12 @@ msgstr ""
 msgid "Checking for updates..."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:892
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:901
 #, c-format
 msgid "Checksum match on file %s\n"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:888
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:897
 #, c-format
 msgid "Checksum mismatch on file %s\n"
 msgstr ""
@@ -2156,7 +2156,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:140
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:432
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1965
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1967
 msgid "Choose the local directory"
 msgstr ""
 
@@ -2303,7 +2303,7 @@ msgid ""
 "received from your server administrator or server hosting provider."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:692
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:694
 msgid "Compare:"
 msgstr ""
 
@@ -2340,7 +2340,7 @@ msgid "Concurrent transfers"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/filteredit.cpp:132
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:686
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:688
 msgid "Conditions are c&ase sensitive"
 msgstr ""
 
@@ -2360,7 +2360,7 @@ msgstr ""
 msgid "Configuring FileZilla and your network"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1685
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1711
 msgid "Confirm deletion"
 msgstr ""
 
@@ -2369,8 +2369,8 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteTreeView.cpp:1092
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1123
 #: ../../../source/FileZilla3/locales/../src/interface/file_utils.h:43
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1636
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2032
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1662
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2078
 msgid "Confirmation needed"
 msgstr ""
 
@@ -2488,7 +2488,7 @@ msgstr[1] ""
 msgid "Connection timed out."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1062
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1068
 msgid "Connection to server lost."
 msgstr ""
 
@@ -2574,7 +2574,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:2685
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteTreeView.cpp:1461
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1924
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1950
 msgid "Could not copy URLs"
 msgstr ""
 
@@ -2592,7 +2592,7 @@ msgstr ""
 msgid "Could not create URI for this transfer."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:546
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:555
 #, c-format
 msgid "Could not create local file %s\n"
 msgstr ""
@@ -2671,7 +2671,7 @@ msgid "Could not get size of '%s'"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1111
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1624
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1650
 msgid "Could not get temporary directory to download file into."
 msgstr ""
 
@@ -2726,12 +2726,12 @@ msgid ""
 "Synchronized browsing has been disabled."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:858
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:867
 #, c-format
 msgid "Could not obtain size of '%s'"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:871
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:880
 #, c-format
 msgid "Could not open '%s'"
 msgstr ""
@@ -2739,7 +2739,7 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:2685
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteTreeView.cpp:1461
 #: ../../../source/FileZilla3/locales/../src/interface/aboutdialog.cpp:220
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1924
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1950
 msgid "Could not open clipboard"
 msgstr ""
 
@@ -2760,7 +2760,7 @@ msgstr ""
 msgid "Could not parse server address:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:880
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:889
 #, c-format
 msgid "Could not read from '%s'"
 msgstr ""
@@ -2818,7 +2818,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:422
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:479
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1948
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1950
 #, c-format
 msgid "Could not write \"%s\", the selected sites could not be exported: %s"
 msgstr ""
@@ -3010,8 +3010,8 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1065
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteTreeView.cpp:909
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1221
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1229
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1242
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1253
 msgid "D&elete"
 msgstr ""
 
@@ -3134,7 +3134,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1058
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1059
 msgid "Delete Site Manager entries"
 msgstr ""
 
@@ -3307,7 +3307,7 @@ msgstr ""
 msgid "Do you really want to delete all Site Manager entries?"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1060
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1061
 msgid "Do you really want to delete the selected entries?"
 msgstr ""
 
@@ -3363,8 +3363,8 @@ msgid "Download limit: none"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/resources/xrc/dialogs.xrc:676
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1331
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1336
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1357
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1362
 msgid "Download search results"
 msgstr ""
 
@@ -3460,7 +3460,7 @@ msgid ""
 "Edit the file with the configured editor and upload changes to the server."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1612
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1638
 msgid "Editing directories is not supported"
 msgstr ""
 
@@ -3469,7 +3469,7 @@ msgstr ""
 msgid "Editing failed"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1612
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1638
 msgid "Editing search results"
 msgstr ""
 
@@ -3676,6 +3676,8 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/filter_manager.cpp:570
 #: ../../../source/FileZilla3/locales/../src/interface/osx_sandbox_userdirs.cpp:67
 #: ../../../source/FileZilla3/locales/../src/interface/osx_sandbox_userdirs.cpp:138
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1806
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1840
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:44
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:281
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:358
@@ -3685,8 +3687,6 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:716
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:776
 #: ../../../source/FileZilla3/locales/../src/interface/wrapengine.cpp:946
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1780
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1814
 msgid "Error loading xml file"
 msgstr ""
 
@@ -3708,7 +3708,7 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:423
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:480
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:799
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1949
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1951
 #: ../../../source/FileZilla3/locales/../src/interface/verifycertdialog.cpp:30
 #: ../../../source/FileZilla3/locales/../src/interface/xmlfunctions.cpp:20
 msgid "Error writing xml file"
@@ -3836,7 +3836,7 @@ msgstr ""
 msgid "Failed to convert reply to local character set."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1682
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1684
 msgid "Failed to copy or move sites"
 msgstr ""
 
@@ -3967,7 +3967,7 @@ msgstr ""
 msgid "Fall back to active mode"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:693
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:695
 msgid "Fil&e sizes"
 msgstr ""
 
@@ -4013,9 +4013,9 @@ msgstr ""
 msgid "File not found"
 msgstr ""
 
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:639
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1035
 #: ../../../source/FileZilla3/locales/../src/interface/toolbar.cpp:118
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:637
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1029
 msgid "File search"
 msgstr ""
 
@@ -4193,11 +4193,11 @@ msgstr ""
 msgid "Filter validation failed"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:687
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:689
 msgid "Find &files"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:688
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:690
 msgid "Find d&irectories"
 msgstr ""
 
@@ -4260,7 +4260,7 @@ msgid "Format: Extension followed by properly quoted command and arguments."
 msgstr ""
 
 #. @translator: Two examples: Found new nightly 2014-04-03\n, Found new release 3.9.0.1\n
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:813
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:822
 #, c-format
 msgid "Found new %s %s\n"
 msgstr ""
@@ -4697,7 +4697,7 @@ msgstr ""
 msgid "Invalid filename"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:808
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:817
 #, c-format
 msgid "Invalid hash: %s\n"
 msgstr ""
@@ -4750,7 +4750,7 @@ msgstr ""
 msgid "Invalid regular expression"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1029
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1035
 #, c-format
 msgid "Invalid search conditions: %s"
 msgstr ""
@@ -4894,7 +4894,7 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1184
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1190
 msgid "Local &directory:"
 msgstr ""
 
@@ -4906,8 +4906,8 @@ msgstr ""
 msgid "Local file does not exist."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:441
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:551
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:450
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:560
 #, c-format
 msgid "Local file is %s\n"
 msgstr ""
@@ -4920,8 +4920,8 @@ msgstr ""
 msgid "Local file is not a valid filename."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1041
 #: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1047
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1053
 msgid "Local file search"
 msgstr ""
 
@@ -4933,7 +4933,7 @@ msgstr ""
 msgid "Local path handling:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:707
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:709
 msgid "Local results:"
 msgstr ""
 
@@ -4941,7 +4941,7 @@ msgstr ""
 msgid "Local site:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:862
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:871
 #, c-format
 msgid "Local size of '%s' does not match expected size: %d != %d"
 msgstr ""
@@ -5045,19 +5045,19 @@ msgstr ""
 msgid "Master password:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:671
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:673
 msgid "Match all of the following"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:672
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:674
 msgid "Match any of the following"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:673
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:675
 msgid "Match none of the following"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:674
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:676
 msgid "Match not all of the following"
 msgstr ""
 
@@ -5086,7 +5086,7 @@ msgstr ""
 msgid "Minutes"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:694
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:696
 msgid "Modification tim&e"
 msgstr ""
 
@@ -5126,7 +5126,7 @@ msgid "Name"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:779
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1007
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1008
 msgid "Name already exists"
 msgstr ""
 
@@ -5154,11 +5154,11 @@ msgstr ""
 msgid "Need to enter filter name"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1041
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1047
 msgid "Need to enter valid local path"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1069
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1075
 msgid "Need to enter valid remote path"
 msgstr ""
 
@@ -5206,7 +5206,7 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:646
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:903
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:389
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1866
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1868
 msgid "New bookmark"
 msgstr ""
 
@@ -5225,13 +5225,13 @@ msgstr ""
 msgid "New filter"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:876
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:877
 msgid "New folder"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:301
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:315
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1839
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1841
 msgid "New site"
 msgstr ""
 
@@ -5259,7 +5259,7 @@ msgstr ""
 msgid "No directory added"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1428
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1430
 #, c-format
 msgid "No entries found matching '%s'."
 msgstr ""
@@ -5317,8 +5317,8 @@ msgstr ""
 msgid "No program has been associated to edit files with the extension '%s'."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:713
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:719
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:715
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:721
 msgid "No search results"
 msgstr ""
 
@@ -5509,8 +5509,8 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/LocalListView.cpp:1947
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:380
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1331
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2063
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2074
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2109
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2120
 msgid "Opening failed"
 msgstr ""
 
@@ -5592,7 +5592,7 @@ msgstr ""
 msgid "Overwrite if different si&ze or source newer"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:259
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:268
 #, c-format
 msgid "Own build type: %s\n"
 msgstr ""
@@ -5637,7 +5637,7 @@ msgstr ""
 msgid "Parameter not a valid URL"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:622
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:631
 #, c-format
 msgid "Parsing %d bytes of version information.\n"
 msgstr ""
@@ -6012,7 +6012,7 @@ msgid "Preallocation"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager.cpp:202
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1516
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1518
 msgid "Predefined Sites"
 msgstr ""
 
@@ -6252,7 +6252,7 @@ msgid "Really cancel current operation?"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1417
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1677
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1703
 #, c-format
 msgid "Really delete %d directory with its contents from the server?"
 msgid_plural ""
@@ -6261,7 +6261,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1414
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1674
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1700
 #, c-format
 msgid "Really delete %d file from the server?"
 msgid_plural "Really delete %d files from the server?"
@@ -6269,7 +6269,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/RemoteListView.cpp:1422
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1682
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1708
 #, c-format
 msgid "Really delete %s and %s from the server?"
 msgstr ""
@@ -6309,7 +6309,7 @@ msgstr ""
 msgid "Received data tainted"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:603
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:612
 msgid "Received invalid character in version information"
 msgstr ""
 
@@ -6384,8 +6384,8 @@ msgstr ""
 msgid "Remote file"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1062
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1069
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1068
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1075
 msgid "Remote file search"
 msgstr ""
 
@@ -6404,7 +6404,7 @@ msgid ""
 "supported by the current site's servertype (%s)."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:923
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:924
 #, c-format
 msgid ""
 "Remote path cannot be parsed. Make sure it is a valid absolute path and is "
@@ -6413,7 +6413,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:491
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:496
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:926
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:927
 msgid "Remote path cannot be parsed. Make sure it is a valid absolute path."
 msgstr ""
 
@@ -6429,7 +6429,7 @@ msgstr ""
 msgid "Remote path:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:708
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:710
 msgid "Remote results:"
 msgstr ""
 
@@ -6524,7 +6524,7 @@ msgstr ""
 msgid "Restore ta&bs and reconnect"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:699
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:701
 msgid "Results:"
 msgstr ""
 
@@ -6587,7 +6587,7 @@ msgstr ""
 msgid "S&tart normally"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:662
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:664
 msgid "S&top"
 msgstr ""
 
@@ -6655,17 +6655,17 @@ msgstr ""
 msgid "Scale factor:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:668
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:670
 msgid "Search &conditions:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:660
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:665
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1187
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:662
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:667
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1193
 msgid "Search &directory:"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1385
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1387
 msgid "Search for entries containing the entered text."
 msgstr ""
 
@@ -6673,7 +6673,7 @@ msgstr ""
 msgid "Search for files recursively."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1428
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1430
 msgid "Search result"
 msgstr ""
 
@@ -6681,11 +6681,11 @@ msgstr ""
 msgid "Search server for files"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1385
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1387
 msgid "Search sites"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:650
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:652
 msgid "Search type:"
 msgstr ""
 
@@ -6763,7 +6763,7 @@ msgid "Select file for exported settings"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/export.cpp:39
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1909
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:1911
 msgid "Select file for exported sites"
 msgstr ""
 
@@ -6783,7 +6783,7 @@ msgstr ""
 msgid "Select how these files should be opened."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1318
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1344
 msgid "Select target download directory"
 msgstr ""
 
@@ -6799,7 +6799,7 @@ msgstr ""
 msgid "Select the private data you would like to delete."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1275
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1301
 #, c-format
 msgid "Selected %d directory with its contents for transfer."
 msgid_plural "Selected %d directories with their contents for transfer."
@@ -6813,7 +6813,7 @@ msgid_plural "Selected %d directories."
 msgstr[0] ""
 msgstr[1] ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1272
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1298
 #, c-format
 msgid "Selected %d file for transfer."
 msgid_plural "Selected %d files for transfer."
@@ -6834,7 +6834,7 @@ msgid_plural "Selected %d files. Total size: At least %s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1280
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1306
 #, c-format
 msgid "Selected %s and %s for transfer."
 msgstr ""
@@ -7063,7 +7063,7 @@ msgstr ""
 msgid "Show details about custom date and time formats"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1220
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1241
 msgid "Show in file &manager"
 msgstr ""
 
@@ -7114,9 +7114,9 @@ msgstr ""
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager_controls.cpp:1402
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager_controls.cpp:1414
 #: ../../../source/FileZilla3/locales/../src/interface/sitemanager_controls.cpp:1428
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:928
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:937
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:944
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:929
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:938
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:945
 msgid "Site Manager - Invalid data"
 msgstr ""
 
@@ -7266,7 +7266,7 @@ msgstr ""
 msgid "Start with opened Site Manager"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:249
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:258
 #, c-format
 msgid "Started update check on %s\n"
 msgstr ""
@@ -7544,7 +7544,7 @@ msgstr ""
 msgid "The entered passwords are not the same."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/settings/optionspage_filetype.cpp:204
+#: ../../../source/FileZilla3/locales/../src/interface/settings/optionspage_filetype.cpp:207
 #, c-format
 msgid "The extension '%s' does already exist in the list"
 msgstr ""
@@ -7559,7 +7559,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/LocalListView.cpp:1939
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1336
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2067
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2113
 #, c-format
 msgid ""
 "The file '%s' cannot be opened:\n"
@@ -7586,7 +7586,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/LocalListView.cpp:1935
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1331
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2063
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2109
 #, c-format
 msgid ""
 "The file '%s' could not be opened:\n"
@@ -7595,7 +7595,7 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/LocalListView.cpp:1947
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:380
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2074
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2120
 #, c-format
 msgid ""
 "The file '%s' could not be opened:\n"
@@ -8168,7 +8168,7 @@ msgid "Upload limit: none"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/resources/xrc/dialogs.xrc:777
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1345
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1371
 msgid "Upload search results"
 msgstr ""
 
@@ -8531,14 +8531,14 @@ msgid "You have selected at least one symbolic link."
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/edithandler.cpp:1124
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1637
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1663
 msgid ""
 "You have selected more than 10 files for editing, do you really want to "
 "continue?"
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/LocalListView.cpp:1906
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2033
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:2079
 msgid ""
 "You have selected more than 10 files or directories to open, do you really "
 "want to continue?"
@@ -8552,11 +8552,11 @@ msgstr ""
 msgid "You have to enter a key file path"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1331
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1357
 msgid "You have to enter a local directory."
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1345
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1371
 msgid "You have to enter a remote directory."
 msgstr ""
 
@@ -8576,7 +8576,7 @@ msgid ""
 "Error: %s"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1336
+#: ../../../source/FileZilla3/locales/../src/interface/search.cpp:1362
 msgid "You have to enter a writable local directory."
 msgstr ""
 
@@ -8629,13 +8629,13 @@ msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:85
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:506
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:937
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:938
 msgid "You need to enter at least one path, empty bookmarks are not supported."
 msgstr ""
 
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:91
 #: ../../../source/FileZilla3/locales/../src/interface/bookmarks_dialog.cpp:512
-#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:944
+#: ../../../source/FileZilla3/locales/../src/interface/sitemanager_dialog.cpp:945
 msgid ""
 "You need to enter both a local and a remote path to enable synchronized "
 "browsing for this bookmark."
@@ -8700,7 +8700,7 @@ msgstr ""
 msgid "contains"
 msgstr ""
 
-#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:254
+#: ../../../source/FileZilla3/locales/../src/commonui/updater.cpp:263
 msgid "custom"
 msgstr ""
 
