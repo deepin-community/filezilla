@@ -183,7 +183,9 @@ void CSearchDialogFileList::clear()
 	remoteFileData_.clear();
 	SetItemCount(0);
 	RefreshListOnly(true);
-	GetFilelistStatusBar()->Clear();
+	if (auto* sbar = GetFilelistStatusBar()) {	
+		sbar->Clear();
+	}
 	m_canStartComparison = false;
 }
 
@@ -767,7 +769,7 @@ bool CSearchDialog::Load()
 
 	SetMinClientSize(GetSizer()->GetMinSize());
 
-	m_pWindowStateManager = new CWindowStateManager(this);
+	m_pWindowStateManager = new CWindowStateManager(this, options_);
 	m_pWindowStateManager->Restore(OPTION_SEARCH_SIZE, wxSize(1750, 500));
 
 	if (mode_ == search_mode::remote) {
@@ -913,11 +915,11 @@ void CSearchDialog::ProcessDirectoryListing(std::shared_ptr<CDirectoryListing> c
 		CRemoteSearchFileData remoteData;
 		static_cast<CDirentry&>(remoteData) = entry;
 		remoteData.path = listing->path;
-		results->remoteFileData_.push_back(remoteData);
+		results->remoteFileData_.emplace_back(std::move(remoteData));
 
 		CGenericFileData data;
 		data.icon = entry.is_dir() ? m_results->m_dirIcon : -2;
-		results->m_fileData.push_back(data);
+		results->m_fileData.emplace_back(std::move(data));
 
 		auto insertPos = std::lower_bound(results->m_indexMapping.begin(), results->m_indexMapping.end(), old_count + added_count, SortPredicate(compare));
 		int const added_index = insertPos - results->m_indexMapping.begin();
@@ -932,11 +934,13 @@ void CSearchDialog::ProcessDirectoryListing(std::shared_ptr<CDirectoryListing> c
 			added_indexes.insert(added_indexes_insert_pos, added_index);
 		}
 
-		if (entry.is_dir()) {
-			results->GetFilelistStatusBar()->AddDirectory();
-		}
-		else {
-			results->GetFilelistStatusBar()->AddFile(entry.size);
+		if (auto* sbar = results->GetFilelistStatusBar()) {
+			if (entry.is_dir()) {
+				sbar->AddDirectory();
+			}
+			else {
+				sbar->AddFile(entry.size);
+			}
 		}
 	}
 
@@ -995,11 +999,13 @@ void CSearchDialog::ProcessDirectoryListing(CLocalRecursiveOperation::listing co
 			added_indexes.insert(added_indexes_insert_pos, added_index);
 		}
 
-		if (dir) {
-			m_results->GetFilelistStatusBar()->AddDirectory();
-		}
-		else {
-			m_results->GetFilelistStatusBar()->AddFile(entry.size);
+		if (auto* sbar = m_results->GetFilelistStatusBar()) {
+			if (dir) {
+				sbar->AddDirectory();
+			}
+			else {
+				sbar->AddFile(entry.size);
+			}
 		}
 	};
 
@@ -1204,14 +1210,29 @@ void CSearchDialog::OnContextMenu(wxContextMenuEvent& event)
 		return;
 	}
 
+	CSearchDialogFileList* r = m_results;
+
 	bool local_results{};
 	if (mode_ == search_mode::comparison) {
 		local_results = (evObj == m_results || evObj == m_results->GetMainWindow());
+		if (!local_results) {
+			r = m_remoteResults;
+		}
 	}
 	else {
 		local_results = mode_ == search_mode::local;
 	}
 	bool const connected = m_state.IsRemoteIdle() && m_state.IsRemoteConnected();
+
+	bool hasSelection{};
+	bool multipleSelection{};
+	int item = r->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+	if (item != -1) {
+		hasSelection = true;
+		if (r->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED) != -1) {
+			multipleSelection = true;
+		}
+	}
 
 	wxMenu menu;
 	if (local_results) {
@@ -1220,7 +1241,10 @@ void CSearchDialog::OnContextMenu(wxContextMenuEvent& event)
 		menu.Append(XRCID("ID_MENU_SEARCH_FILEMANAGER"), _("Show in file &manager"));
 		menu.Append(XRCID("ID_MENU_SEARCH_DELETE"), _("D&elete"));
 
-		menu.Enable(XRCID("ID_MENU_SEARCH_UPLOAD"), connected);
+		menu.Enable(XRCID("ID_MENU_SEARCH_UPLOAD"), connected && hasSelection);
+		menu.Enable(XRCID("ID_MENU_SEARCH_LOCAL_OPEN"), hasSelection && !multipleSelection);
+		menu.Enable(XRCID("ID_MENU_SEARCH_FILEMANAGER"), hasSelection);
+		menu.Enable(XRCID("ID_MENU_SEARCH_DELETE"), hasSelection);
 	}
 	else {
 		menu.Append(XRCID("ID_MENU_SEARCH_DOWNLOAD"), _("&Download..."));
@@ -1230,15 +1254,17 @@ void CSearchDialog::OnContextMenu(wxContextMenuEvent& event)
 
 		if (wxGetKeyState(WXK_SHIFT)) {
 			menu.Append(XRCID("ID_MENU_SEARCH_GETURL_PASSWORD"), _("C&opy URL(s) with password to clipboard"));
+			menu.Enable(XRCID("ID_MENU_SEARCH_GETURL_PASSWORD"), hasSelection);
 		}
 		else {
 			menu.Append(XRCID("ID_MENU_SEARCH_GETURL"), _("C&opy URL(s) to clipboard"));
+			menu.Enable(XRCID("ID_MENU_SEARCH_GETURL"), hasSelection);
 		}
 
-		menu.Enable(XRCID("ID_MENU_SEARCH_DOWNLOAD"), connected);
-		menu.Enable(XRCID("ID_MENU_SEARCH_REMOTE_OPEN"), connected);
-		menu.Enable(XRCID("ID_MENU_SEARCH_DELETE_REMOTE"), connected);
-		menu.Enable(XRCID("ID_MENU_SEARCH_EDIT"), connected);
+		menu.Enable(XRCID("ID_MENU_SEARCH_DOWNLOAD"), connected && hasSelection);
+		menu.Enable(XRCID("ID_MENU_SEARCH_REMOTE_OPEN"), connected && hasSelection && !multipleSelection);
+		menu.Enable(XRCID("ID_MENU_SEARCH_DELETE_REMOTE"), connected && hasSelection);
+		menu.Enable(XRCID("ID_MENU_SEARCH_EDIT"), connected && hasSelection);
 	}
 
 	PopupMenu(&menu);
@@ -1965,17 +1991,27 @@ void CSearchDialog::OnGetUrl(wxCommandEvent& event)
 
 void CSearchDialog::OnLocalOpen(wxCommandEvent&)
 {
-	// Find all selected files and directories
-	std::deque<CLocalPath> selected_dirs;
-	std::list<int> selected_files;
-	ProcessSelection(selected_files, selected_dirs, m_results->localFileData_, m_results);
-
-	if (selected_dirs.empty() || selected_dirs.size() > 1) {
+	int sel = m_results->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+	if (sel == -1 || m_results->GetNextItem(sel, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED) != -1) {
 		wxBell();
 		return;
 	}
+	if (static_cast<size_t>(sel) >= m_results->indexMapping().size()) {
+		wxBell();
+		return;
+	}
+	int index = m_results->indexMapping()[sel];
+	auto & data = m_results->localFileData_[index];
 
-	m_state.SetLocalDir(selected_dirs[0]);
+	CLocalPath path = data.path;
+	if (data.is_dir()) {
+		path.ChangePath(data.name);
+		if (path.empty()) {
+			return;
+		}
+	}
+
+	m_state.SetLocalDir(path);
 
 	EndDialog(wxID_OK);
 }
@@ -1987,17 +2023,27 @@ void CSearchDialog::OnRemoteOpen(wxCommandEvent&)
 		results = m_remoteResults;
 	}
 
-	// Find all selected files and directories
-	std::deque<CServerPath> selected_dirs;
-	std::list<int> selected_files;
-	ProcessSelection(selected_files, selected_dirs, results->remoteFileData_, results);
-
-	if (selected_dirs.empty() || selected_dirs.size() > 1) {
+	int sel = results->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+	if (sel == -1 || results->GetNextItem(sel, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED) != -1) {
 		wxBell();
 		return;
 	}
+	if (static_cast<size_t>(sel) >= results->indexMapping().size()) {
+		wxBell();
+		return;
+	}
+	int index = results->indexMapping()[sel];
+	auto & data = results->remoteFileData_[index];
 
-	m_state.ChangeRemoteDir(selected_dirs[0]);
+	CServerPath path = data.path;
+	if (data.is_dir()) {
+		path.ChangePath(data.name);
+		if (path.empty()) {
+			return;
+		}
+	}
+
+	m_state.ChangeRemoteDir(path);
 
 	EndDialog(wxID_OK);
 }

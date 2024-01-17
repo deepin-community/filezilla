@@ -10,6 +10,34 @@ Legend:
     *nix: Unix (e.g BSD) and Unix-like systems (e.g. Linux)
     macOS/OS X: Apple macOS
 
+3.66.4 (2023-12-20)
+
+! SFTP: Address Terrapin protocol vulerability
+
+3.66.3-rc1 (2023-12-11)
+
+- Test release for macOS CPU architecture migration
+
+3.66.3-beta1 (2023-12-07)
+
++ macOS: Now also distributing aarch64 binaries
+- macOS: Fixes for language detection
+- Fixed a potential crash in the HTTP client
+
+3.66.1 (2023-11-03)
+
+- macOS: Fixed display of local filenames containing non-ASCII characters if LC_CTYPE wasn't set
+
+3.66.0 (2023-10-23)
+
+- Fixed a sorting issue in comparative search
+
+3.66.0-rc1 (2023-10-11)
+
+- Fixed crash removing items from the list of file extensions treated as text files
+- Fixed potental crash if shutting down HTTP client.
+- Fixed HTTP timeouts
+
 3.65.0 (2023-07-10)
 
 + Comparative search can now also be used if sorted by path

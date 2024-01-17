@@ -1,4 +1,3 @@
 01_remove-xdg-check.patch
 # 11_use-decimal-si-by-default.patch
 0002-Add-patch-to-not-build-fzshellext.patch
-0003-crash-when-removing-filetypes-from-list.patch

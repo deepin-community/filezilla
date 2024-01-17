@@ -5,11 +5,7 @@
 
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
-ifeq ($(DEB_HOST_ARCH_CPU),i386)
-# Workaround GCC bug on i386
-export DEB_CFLAGS_MAINT_APPEND = -msse4.1
-export DEB_CXXFLAGS_MAINT_APPEND = -msse4.1
-endif
+export DEB_DH_SHLIBDEPS_ARGS_ALL=--dpkg-shlibdeps-params=--ignore-missing-info
 
 %:
 	dh $@
@@ -35,6 +31,12 @@ override_dh_dwz:
 
 override_dh_auto_configure:
 	dh_auto_configure -- --disable-autoupdatecheck --disable-manualupdatecheck --with-dbus
+ifeq ($(DEB_HOST_ARCH_CPU),i386)
+	# Workaround GCC bug on i386. Hopefully can remove when GCC 14 released.
+	# Append -msse4.1 to both CFLAGS and CXXFLAGS
+	sed 's?-Wall?-Wall -msse4.1?' < src/putty/Makefile > src/putty/Makefile.tmp
+	mv src/putty/Makefile.tmp src/putty/Makefile
+endif
 
 override_dh_auto_install:
 	dh_auto_install
